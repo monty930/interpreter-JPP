@@ -1,0 +1,13 @@
+Proc main () {
+    print ((string) 'd');
+    print_line ((string) 22);
+    print ("Hello world");
+    char c = '\n';
+    print ((string) c);
+}
+
+/*
+expected result:
+d22
+Hello world
+*/

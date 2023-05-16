@@ -1,0 +1,10 @@
+Proc main() {
+    if( ( 3 > 2 ) || ( 1 / 0 == 3) ) // laziness test
+        { print_line("True") }
+    else
+        { print_line("false") }
+}
+
+/* expected: 
+    True
+*/

@@ -1,0 +1,13 @@
+Proc P(string str) {
+    print_line(str);
+}
+
+Proc main() {
+    P("Hello" + " " + "World");
+    char d = 'd';
+    d = 'c' + 'd';
+}
+
+// Expected:
+// Hello World
+// Operation not permitted

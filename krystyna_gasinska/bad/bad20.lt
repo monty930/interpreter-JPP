@@ -1,0 +1,5 @@
+Proc main() {
+    int x = 1 / 0;
+}
+
+// Expected: Division by zero

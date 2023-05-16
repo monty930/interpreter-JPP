@@ -1,0 +1,7 @@
+Proc main() {
+    bool x = 12;
+    x = 13;
+    print_line((string) x);
+}
+
+// Expected: Type mismatch (in 2nd line)

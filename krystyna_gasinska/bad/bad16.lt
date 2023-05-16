@@ -1,0 +1,14 @@
+
+Proc main() {
+    # casting is of highest priority,
+    # so brackets are obligatory
+    int a = (int) (2 < 3);
+    print_line((string) a);
+
+    int b = (int) 2 < 3;
+    print_line((string) b);
+}
+
+// Expected:
+// 1
+// Type mismatch

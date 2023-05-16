@@ -1,0 +1,10 @@
+Proc P(int x, char y, bool z) {
+
+}
+
+Proc main() {
+    int arg = 42;
+    P(arg, 'c', "wrong type");
+}
+
+// Expected: Type mismatch

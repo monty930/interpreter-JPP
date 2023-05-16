@@ -1,0 +1,17 @@
+Proc DecToBin (int x) {
+  if( x > 0 ) {
+    DecToBin( x/2 );
+    int y = x%2;
+    print((string) y );
+  }
+}
+
+Proc main() {
+    int x = 10;
+    DecToBin(x);
+    print_line("");
+}
+
+/* expected: 
+    1010
+*/

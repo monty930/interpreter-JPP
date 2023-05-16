@@ -1,0 +1,16 @@
+Proc P(int x, char y, bool z, int t) {
+    x = x + 20;
+    print_line((string) t)
+}
+
+Proc main() {
+    int arg = 42;
+    P(&arg, 'c', true, 2 + 2);
+    print_line((string) arg);
+    print_line((string) ("ala" != "Ala"));
+}
+
+// Expected:
+// 4
+// 62
+// True

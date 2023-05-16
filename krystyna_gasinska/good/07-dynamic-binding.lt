@@ -1,0 +1,21 @@
+Proc f(int y) {
+    y++;
+    print_line((string) y);
+    z = 3; // dynamic binding
+    if (y == 2) {
+        f(&z);
+    }
+}
+
+Proc main() {
+    int x = 1;
+    int z = 0; // the variable must be declared
+    f(&x);
+    print_line((string) x);
+    string s = "aaa";
+}
+
+// expected: 
+// 2
+// 4
+// 2

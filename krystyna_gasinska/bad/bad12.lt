@@ -1,0 +1,14 @@
+Proc P(string str) {
+    print_line(str);
+}
+
+Proc main() {
+    int x = 1;
+    char c = 'c';
+    if (x > c) {
+        P("str");
+    }
+}
+
+// Expected:
+// Operation not permitted

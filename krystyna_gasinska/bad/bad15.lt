@@ -1,0 +1,7 @@
+Proc main() {
+    int x = (int) !true;
+    x = true;
+}
+
+// Expected:
+// Type mismatch

@@ -1,0 +1,13 @@
+Proc P(int x, char y, bool z, int t) {
+    x = x + 20;
+    print_line((string) t)
+}
+
+Proc main() {
+    int arg = 42;
+    char c = 'c';
+    P(&arg, c, true, &c);
+    print_line((string) arg);
+}
+
+// Expected: Type mismatch

@@ -1,0 +1,12 @@
+Proc f(int y) {
+    z = 'c'; // dynamic identifiers binding
+}
+
+Proc main() {
+    int x = 1;
+    int z = 0;
+    f(&x);
+}
+
+// expected: 
+// Type mismatch

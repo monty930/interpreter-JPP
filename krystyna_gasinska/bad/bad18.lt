@@ -1,0 +1,22 @@
+Proc abs (int x) {
+  if( x > 0 ) {
+    print_line((string) x );
+  }
+  else {
+    int y = -x;
+    print_line((string) y );
+  }
+}
+
+Proc main() {
+    abs(3);
+    abs(-4);
+    bool x = true;
+    abs(x);
+}
+
+/* expected: 
+    3
+    4
+    Type mismatch
+*/

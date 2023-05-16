@@ -1,0 +1,21 @@
+Proc rec() {
+    print_line("Inside with value " + (string) y);
+    y++;
+    if (y < 5) {
+        rec()
+    }
+}
+
+Proc main() {
+    int y = 0;
+    rec();
+}
+
+/*
+Expected:
+Inside with value 0
+Inside with value 1
+Inside with value 2
+Inside with value 3
+Inside with value 4
+*/

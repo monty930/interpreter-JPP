@@ -1,0 +1,9 @@
+Proc P(int x, char y) {
+
+}
+
+Proc main() {
+    P(1, 'c', 3);
+}
+
+// Expected: wrong number of arguments

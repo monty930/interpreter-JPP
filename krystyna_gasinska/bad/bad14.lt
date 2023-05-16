@@ -1,0 +1,10 @@
+Proc main() {
+    int x = (int) !true;
+    print_line((string) x)
+    bool y = true;
+    bool x = true;
+}
+
+// Expected:
+// 0
+// Redeclaration of variable
