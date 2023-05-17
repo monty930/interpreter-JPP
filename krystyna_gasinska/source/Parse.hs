@@ -14,7 +14,7 @@ getParsedProgramFromFile p f = readFile f >>= getParsedProgram p
 getParsedProgram :: ParseFun Program -> String -> IO Program
 getParsedProgram p s =
   case p ts of
-    Left err -> error err
+    Left err -> errorWithoutStackTrace err
     Right tree -> return tree
   where
   ts = myLexer s

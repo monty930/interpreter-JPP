@@ -1,3 +1,1 @@
 interpreter: syntax error at line 1, column 11 before `{'
-CallStack (from HasCallStack):
-  error, called at source/Parse.hs:17:17 in main:Parse
