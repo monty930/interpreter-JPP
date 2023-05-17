@@ -2,6 +2,7 @@
 entrypoints Program ;
 Program_T. Program ::= [TopDef] ;
 ProcDef_T. TopDef ::= "Proc" Ident "(" [Arg] ")" Block ;
+GlobVar_T. TopDef ::= "Glob" Type Ident "=" Expr ";" ;
 separator  TopDef "" ;
 Arg_T. 	   Arg ::= Type Ident;
 separator  Arg "," ;
