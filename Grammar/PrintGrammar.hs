@@ -146,7 +146,8 @@ instance Print (AbsGrammar.Program' a) where
 
 instance Print (AbsGrammar.TopDef' a) where
   prt i = \case
-    AbsGrammar.ProcDef_T _ id_ args block -> prPrec i 0 (concatD [doc (showString "Proc"), prt 0 id_, doc (showString "("), prt 0 args, doc (showString ")"), prt 0 block])
+    AbsGrammar.ProcDef_T _ retval id_ args block -> prPrec i 0 (concatD [prt 0 retval, prt 0 id_, doc (showString "("), prt 0 args, doc (showString ")"), prt 0 block])
+    AbsGrammar.GlobVar_T _ type_ id_ expr -> prPrec i 0 (concatD [doc (showString "Glob"), prt 0 type_, prt 0 id_, doc (showString "="), prt 0 expr, doc (showString ";")])
 
 instance Print [AbsGrammar.TopDef' a] where
   prt _ [] = concatD []
@@ -181,6 +182,7 @@ instance Print (AbsGrammar.Stmt' a) where
     AbsGrammar.CondElse_T _ expr block1 block2 -> prPrec i 0 (concatD [doc (showString "if"), doc (showString "("), prt 0 expr, doc (showString ")"), prt 0 block1, doc (showString "else"), prt 0 block2])
     AbsGrammar.While_T _ expr block -> prPrec i 0 (concatD [doc (showString "while"), doc (showString "("), prt 0 expr, doc (showString ")"), prt 0 block])
     AbsGrammar.App_T _ id_ funargs -> prPrec i 0 (concatD [prt 0 id_, doc (showString "("), prt 0 funargs, doc (showString ")")])
+    AbsGrammar.Return_T _ expr -> prPrec i 0 (concatD [doc (showString "return"), doc (showString "("), prt 0 expr, doc (showString ")")])
     AbsGrammar.SExp_T _ expr -> prPrec i 0 (concatD [prt 0 expr, doc (showString ";")])
 
 instance Print (AbsGrammar.Type' a) where
@@ -189,6 +191,11 @@ instance Print (AbsGrammar.Type' a) where
     AbsGrammar.CharT_T _ -> prPrec i 0 (concatD [doc (showString "char")])
     AbsGrammar.Str_T _ -> prPrec i 0 (concatD [doc (showString "string")])
     AbsGrammar.Bool_T _ -> prPrec i 0 (concatD [doc (showString "bool")])
+
+instance Print (AbsGrammar.RetVal' a) where
+  prt i = \case
+    AbsGrammar.FunRetVal_T _ type_ -> prPrec i 0 (concatD [prt 0 type_])
+    AbsGrammar.FunRetVoid_T _ -> prPrec i 0 (concatD [doc (showString "Proc")])
 
 instance Print (AbsGrammar.Var' a) where
   prt i = \case

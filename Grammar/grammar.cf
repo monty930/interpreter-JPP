@@ -1,7 +1,7 @@
 -- programs ------------------------------------------------
 entrypoints Program ;
 Program_T. Program ::= [TopDef] ;
-ProcDef_T. TopDef ::= "Proc" Ident "(" [Arg] ")" Block ;
+ProcDef_T. TopDef ::= RetVal Ident "(" [Arg] ")" Block ;
 GlobVar_T. TopDef ::= "Glob" Type Ident "=" Expr ";" ;
 separator  TopDef "" ;
 Arg_T. 	   Arg ::= Type Ident;
@@ -19,12 +19,15 @@ Cond_T.    Stmt ::= "if" "(" Expr ")" Block  ;
 CondElse_T. Stmt ::= "if" "(" Expr ")" Block "else" Block  ;
 While_T.   Stmt ::= "while" "(" Expr ")" Block ;
 App_T.     Stmt ::= Ident "(" [FunArg] ")" ;
+Return_T.  Stmt ::= "return" "(" Expr ")" ;
 SExp_T.    Stmt ::= Expr  ";" ;
 -- Types ---------------------------------------------------
 Int_T.     Type ::= "int" ;
 CharT_T.   Type ::= "char" ;
 Str_T.     Type ::= "string" ;
 Bool_T.    Type ::= "bool" ;
+FunRetVal_T. RetVal ::= Type ;
+FunRetVoid_T. RetVal ::= "Proc" ;
 -- Expressions ---------------------------------------------
 Var_T.     Var ::= Ident ;
 EVar_T.    Expr7 ::= Var ;

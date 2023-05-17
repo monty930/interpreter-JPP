@@ -44,19 +44,21 @@ import LexGrammar
   '=='     { PT _ (TS _ 19) }
   '>'      { PT _ (TS _ 20) }
   '>='     { PT _ (TS _ 21) }
-  'Proc'   { PT _ (TS _ 22) }
-  'bool'   { PT _ (TS _ 23) }
-  'char'   { PT _ (TS _ 24) }
-  'else'   { PT _ (TS _ 25) }
-  'false'  { PT _ (TS _ 26) }
-  'if'     { PT _ (TS _ 27) }
-  'int'    { PT _ (TS _ 28) }
-  'string' { PT _ (TS _ 29) }
-  'true'   { PT _ (TS _ 30) }
-  'while'  { PT _ (TS _ 31) }
-  '{'      { PT _ (TS _ 32) }
-  '||'     { PT _ (TS _ 33) }
-  '}'      { PT _ (TS _ 34) }
+  'Glob'   { PT _ (TS _ 22) }
+  'Proc'   { PT _ (TS _ 23) }
+  'bool'   { PT _ (TS _ 24) }
+  'char'   { PT _ (TS _ 25) }
+  'else'   { PT _ (TS _ 26) }
+  'false'  { PT _ (TS _ 27) }
+  'if'     { PT _ (TS _ 28) }
+  'int'    { PT _ (TS _ 29) }
+  'return' { PT _ (TS _ 30) }
+  'string' { PT _ (TS _ 31) }
+  'true'   { PT _ (TS _ 32) }
+  'while'  { PT _ (TS _ 33) }
+  '{'      { PT _ (TS _ 34) }
+  '||'     { PT _ (TS _ 35) }
+  '}'      { PT _ (TS _ 36) }
   L_Ident  { PT _ (TV _)    }
   L_charac { PT _ (TC _)    }
   L_integ  { PT _ (TI _)    }
@@ -82,7 +84,8 @@ Program
 
 TopDef :: { (AbsGrammar.BNFC'Position, AbsGrammar.TopDef) }
 TopDef
-  : 'Proc' Ident '(' ListArg ')' Block { (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1), AbsGrammar.ProcDef_T (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1)) (snd $2) (snd $4) (snd $6)) }
+  : RetVal Ident '(' ListArg ')' Block { (fst $1, AbsGrammar.ProcDef_T (fst $1) (snd $1) (snd $2) (snd $4) (snd $6)) }
+  | 'Glob' Type Ident '=' Expr ';' { (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1), AbsGrammar.GlobVar_T (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1)) (snd $2) (snd $3) (snd $5)) }
 
 ListTopDef :: { (AbsGrammar.BNFC'Position, [AbsGrammar.TopDef]) }
 ListTopDef
@@ -120,6 +123,7 @@ Stmt
   | 'if' '(' Expr ')' Block 'else' Block { (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1), AbsGrammar.CondElse_T (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1)) (snd $3) (snd $5) (snd $7)) }
   | 'while' '(' Expr ')' Block { (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1), AbsGrammar.While_T (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1)) (snd $3) (snd $5)) }
   | Ident '(' ListFunArg ')' { (fst $1, AbsGrammar.App_T (fst $1) (snd $1) (snd $3)) }
+  | 'return' '(' Expr ')' { (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1), AbsGrammar.Return_T (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1)) (snd $3)) }
   | Expr ';' { (fst $1, AbsGrammar.SExp_T (fst $1) (snd $1)) }
 
 Type :: { (AbsGrammar.BNFC'Position, AbsGrammar.Type) }
@@ -128,6 +132,11 @@ Type
   | 'char' { (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1), AbsGrammar.CharT_T (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1))) }
   | 'string' { (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1), AbsGrammar.Str_T (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1))) }
   | 'bool' { (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1), AbsGrammar.Bool_T (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1))) }
+
+RetVal :: { (AbsGrammar.BNFC'Position, AbsGrammar.RetVal) }
+RetVal
+  : Type { (fst $1, AbsGrammar.FunRetVal_T (fst $1) (snd $1)) }
+  | 'Proc' { (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1), AbsGrammar.FunRetVoid_T (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1))) }
 
 Var :: { (AbsGrammar.BNFC'Position, AbsGrammar.Var) }
 Var : Ident { (fst $1, AbsGrammar.Var_T (fst $1) (snd $1)) }

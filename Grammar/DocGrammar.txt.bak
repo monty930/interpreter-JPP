@@ -34,8 +34,8 @@ except ``"`` unless preceded by ``\``.
 The set of reserved words is the set of terminals appearing in the grammar. Those reserved words that consist of non-letter characters are called symbols, and they are treated in a different way from those that are similar to identifiers. The lexer follows rules familiar from languages like Haskell, C, and Java, including longest match and spacing conventions.
 
 The reserved words used in grammar are the following:
-  | ``Proc`` | ``bool`` | ``char`` | ``else``
-  | ``false`` | ``glob`` | ``if`` | ``int``
+  | ``Glob`` | ``Proc`` | ``bool`` | ``char``
+  | ``else`` | ``false`` | ``if`` | ``int``
   | ``string`` | ``true`` | ``while`` |
 
 The symbols used in grammar are the following:
@@ -56,8 +56,8 @@ and **eps** (empty rule) belong to the BNF notation.
 All other symbols are terminals.
 
   | //Program// | -> | //[TopDef]//
-  | //TopDef// | -> | ``Proc`` //Ident// ``(`` //[Arg]// ``)`` //Block//
-  |  |  **|**  | ``glob`` //Type// //Ident// ``=`` //Expr// ``;``
+  | //TopDef// | -> | //RetVal// //Ident// ``(`` //[Arg]// ``)`` //Block//
+  |  |  **|**  | ``Glob`` //Type// //Ident// ``=`` //Expr// ``;``
   | //[TopDef]// | -> | **eps**
   |  |  **|**  | //TopDef// //[TopDef]//
   | //Arg// | -> | //Type// //Ident//
@@ -82,6 +82,8 @@ All other symbols are terminals.
   |  |  **|**  | ``char``
   |  |  **|**  | ``string``
   |  |  **|**  | ``bool``
+  | //RetVal// | -> | //Type//
+  |  |  **|**  | ``Proc``
   | //Var// | -> | //Ident//
   | //Expr7// | -> | //Var//
   |  |  **|**  | //ELit//
