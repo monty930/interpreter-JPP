@@ -1,0 +1,16 @@
+Glob int x = 10;
+
+Proc f(int x) {
+    x++;
+    print_line((string) x)
+}
+
+Proc h() {
+    print_line((string) x);
+}
+
+Proc main() {
+    f(&x);
+    print_line((string) x);
+    h();
+}

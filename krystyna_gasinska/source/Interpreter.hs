@@ -8,7 +8,6 @@ import System.Environment ( getArgs )
 import System.Exit        ( exitFailure )
 import Control.Monad      ( when )
 import System.IO (hPutStrLn, stderr)
-import Control.Monad.Except (MonadError, throwError)
 
 import AbsGrammar
 import LexGrammar   ( Token, mkPosToken )
@@ -97,6 +96,21 @@ evalTopDefs (topdef : topdefs) = do
           let envProc' = M.insert ident (args, block, envVar) envProc
           let newEnv = (envVar, envProc')
           local (const newEnv) (evalTopDefs topdefs)
+    GlobVar_T pos type_ ident expr -> do 
+      (envVar, envProc) <- ask
+      stVar <- get
+      val <- evalExpr expr
+      -- check types
+      if stringTypeOfType type_ == stringTypeOfElit val
+        then do
+          -- add variable to environment
+          let newLoc = getNewLoc stVar
+          put (M.insert newLoc (type_, val) stVar)
+          let envVar' = M.insert ident newLoc envVar
+          let newEnv = (envVar', envProc)
+          local (const newEnv) (evalTopDefs topdefs)
+        else do
+          makeError "Type mismatch" pos
 
 bindArgsToEnv :: BNFC'Position -> [Arg] -> [ELit] -> [Arg] -> [Loc] -> EnvVar -> RSE EnvVar
 bindArgsToEnv _ [] [] [] [] envVar = return envVar
@@ -218,11 +232,6 @@ evalStmts pos (stmt : stmts) = do
         then do
           (envVar, envProc) <- ask
           stVar <- get
-
-          -- check if redeclaration
-          case M.lookup ident envVar of
-            Just _ -> makeError ("Variable " ++ getIdentString ident ++ " already declared") pos_decl
-            Nothing -> return ()
 
           -- add variable to environment
           let newLoc = getNewLoc stVar

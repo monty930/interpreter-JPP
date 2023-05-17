@@ -25,7 +25,9 @@ data Program' a = Program_T a [TopDef' a]
   deriving (C.Eq, C.Ord, C.Show, C.Read, C.Functor, C.Foldable, C.Traversable)
 
 type TopDef = TopDef' BNFC'Position
-data TopDef' a = ProcDef_T a Ident [Arg' a] (Block' a)
+data TopDef' a
+    = ProcDef_T a Ident [Arg' a] (Block' a)
+    | GlobVar_T a (Type' a) Ident (Expr' a)
   deriving (C.Eq, C.Ord, C.Show, C.Read, C.Functor, C.Foldable, C.Traversable)
 
 type Arg = Arg' BNFC'Position
@@ -127,6 +129,7 @@ instance HasPosition Program where
 instance HasPosition TopDef where
   hasPosition = \case
     ProcDef_T p _ _ _ -> p
+    GlobVar_T p _ _ _ -> p
 
 instance HasPosition Arg where
   hasPosition = \case

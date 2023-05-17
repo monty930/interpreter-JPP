@@ -1,0 +1,23 @@
+Glob int x = 41;
+Glob int y = 11;
+
+Proc f(int x) {
+    print_line((string) x);
+    int x = 3;
+    print_line((string) x);
+}
+
+Proc main() {
+    print_line((string) x);
+    f(x + 1);
+    int y = 12;
+    f(y);
+}
+
+/*
+41
+42
+3
+12
+3
+*/

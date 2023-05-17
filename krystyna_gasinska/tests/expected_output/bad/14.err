@@ -1,1 +1,1 @@
-interpreter: line 5, column 5 Variable x already declared
+interpreter: line 2, column 5 Variable x not in scope

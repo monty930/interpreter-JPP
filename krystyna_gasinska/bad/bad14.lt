@@ -1,10 +1,5 @@
 Proc main() {
-    int x = (int) !true;
-    print_line((string) x)
-    bool y = true;
-    bool x = true;
+    x++;
 }
 
-// Expected:
-// 0
-// Variable x already declared
+Glob int x = 1;

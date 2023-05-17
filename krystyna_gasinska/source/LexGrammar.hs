@@ -245,13 +245,13 @@ resWords =
        (b "/" 14
           (b "-" 12 (b "," 11 (b "++" 10 N N) N) (b "--" 13 N N))
           (b "<" 16 (b ";" 15 N N) (b "<=" 17 N N))))
-    (b "if" 27
-       (b "bool" 23
-          (b ">=" 21 (b ">" 20 (b "==" 19 N N) N) (b "Proc" 22 N N))
-          (b "else" 25 (b "char" 24 N N) (b "false" 26 N N)))
-       (b "while" 31
-          (b "string" 29 (b "int" 28 N N) (b "true" 30 N N))
-          (b "||" 33 (b "{" 32 N N) (b "}" 34 N N))))
+    (b "false" 27
+       (b "Proc" 23
+          (b ">=" 21 (b ">" 20 (b "==" 19 N N) N) (b "Glob" 22 N N))
+          (b "char" 25 (b "bool" 24 N N) (b "else" 26 N N)))
+       (b "while" 32
+          (b "string" 30 (b "int" 29 (b "if" 28 N N) N) (b "true" 31 N N))
+          (b "||" 34 (b "{" 33 N N) (b "}" 35 N N))))
   where
   b s n = B bs (TS bs n)
     where

@@ -3,12 +3,15 @@ W języku występują typy char, int, bool, string.
 Język oferuje zmienne, przypisywanie, literały, arytmetykę, porównania.
 Dostępna jest pętla while i instrukcje warunkowe (if lub if-else).
 Zmienne można przekazywać do funkcji przez wartość lub przez zmienną.
+Dostępne są zmienne globalne.
 Dostępne są wbudowane procedury print i print_line, które przyjmują
 jeden argument typu string. Dzięki jawnemu rzutowaniu można wypisać
 każdy typ (rzutować można typy dla których to ma sens, np char na int,
 int na bool, wszystkie typy na string; np rzutowanie string na int nie ma sensu).
 Procedury przyjmują argumenty ale nie zwracają wartości.
-Język jest dynamicznie typowany i ma dynamiczne wiązanie identyfikatorów.
+Język jest dynamicznie typowany. Ma statyczne wiązanie identyfikatorów.
+Język zezwala na redeklarację zmiennych.
+Ostatnia instrukcja w bloku nie musi kończyć się średnikiem.
 Zaimplementowana jest obsługa błędów wykonania. Komunikaty o błędach
 wypisywane są na standardowe wyjście błędów.
 
@@ -28,7 +31,7 @@ jest  06 (funkcje lub procedury, rekurencja)
 jest  07 (przez zmienną / przez wartość / in/out)
       08 (zmienne read-only i pętla for)
       Na 20 punktów
-      09 (przesłanianie i statyczne wiązanie)
+jest  09 (przesłanianie i statyczne wiązanie)
 jest  10 (obsługa błędów wykonania)
       11 (funkcje zwracające wartość)
       Na 30 punktów
@@ -42,7 +45,8 @@ jest  10 (obsługa błędów wykonania)
 
 Dodatkowo: jawne rzutowanie
 
-Razem: 17(?)
+Razem: 18(?)
 15
-+1 obsługa błędów wykonani
++1 obsługa błędów wykonania
++1 przesłanianie i statyczne wiązanie
 +1 rzutowanie
