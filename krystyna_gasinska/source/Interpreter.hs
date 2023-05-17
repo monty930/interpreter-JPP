@@ -15,6 +15,7 @@ import ParGrammar   ( pProgram, myLexer )
 import PrintGrammar ( Print, printTree )
 import SkelGrammar  ()
 import Parse
+import Helper
 
 import qualified Data.Map as M
 import Control.Monad.Reader
@@ -28,7 +29,7 @@ type EnvVar = M.Map Ident Loc
 
 type StoreVar = M.Map Loc (Type, ELit)
 
-type EnvProc = M.Map Ident ([Arg], Block, EnvVar)
+type EnvProc = M.Map Ident (RetVal, [Arg], Block, EnvVar)
 
 type Env = (EnvVar, EnvProc)
 
@@ -39,35 +40,6 @@ getNewLoc stVar =
   case M.keys stVar of
     [] -> 0
     keys -> maximum keys + 1
-
-getIdentString :: Ident -> String
-getIdentString (Ident str) = str
-
-getArgIdent :: Arg -> Ident
-getArgIdent (Arg_T _ _ ident) = ident
-
-stringTypeOfArg :: Arg -> String
-stringTypeOfArg (Arg_T _ type_ _) = case type_ of
-  Int_T _ -> "int"
-  CharT_T _ -> "char"
-  Str_T _ -> "string"
-  Bool_T _ -> "bool"
-
-stringTypeOfElit :: ELit -> String
-stringTypeOfElit (ELitInt_T _ _) = "int"
-stringTypeOfElit (EChar_T _ _) = "char"
-stringTypeOfElit (EString_T _ _) = "string"
-stringTypeOfElit (ELitBool_T _ _) = "bool"
-
-stringTypeOfType :: Type -> String
-stringTypeOfType type_ = case type_ of
-  Int_T _ -> "int"
-  CharT_T _ -> "char"
-  Str_T _ -> "string"
-  Bool_T _ -> "bool"
-
-typeOfArg :: Arg -> Type
-typeOfArg (Arg_T _ type_ _) = type_
 
 showBNFC :: BNFC'Position -> String
 showBNFC (Just (line, col)) = "line " ++ show line ++ ", column " ++ show col
@@ -86,17 +58,17 @@ evalTopDefs :: [TopDef] -> RSE Env
 evalTopDefs [] = ask
 evalTopDefs (topdef : topdefs) = do
   case topdef of
-    ProcDef_T pos ident args block -> do
+    ProcDef_T pos ret ident args block -> do
       (envVar, envProc) <- ask
       -- check if procedure is already defined
       case M.lookup ident envProc of
         Just _ -> makeError ("Procedure " ++ getIdentString ident ++ " already defined") pos
         Nothing -> do
           -- add procedure to environment
-          let envProc' = M.insert ident (args, block, envVar) envProc
+          let envProc' = M.insert ident (ret, args, block, envVar) envProc
           let newEnv = (envVar, envProc')
           local (const newEnv) (evalTopDefs topdefs)
-    GlobVar_T pos type_ ident expr -> do 
+    GlobVar_T pos type_ ident expr -> do
       (envVar, envProc) <- ask
       stVar <- get
       val <- evalExpr expr
@@ -149,8 +121,8 @@ evalApp pos ident args = do
     if getIdentString ident == "print" then printImpl pos args else do
       if getIdentString ident == "print_line" then printLnImpl pos args else do
         (envVar, envProc) <- ask
-        (args', block, envVar') <- case M.lookup ident envProc of
-          Just (args', block, envVar') -> return (args', block, envVar')
+        (ret, args', block, envVar') <- case M.lookup ident envProc of
+          Just (ret, args', block, envVar') -> return (ret, args', block, envVar')
           Nothing ->
             case pos of
               BNFC'NoPosition -> makeError "There is no 'main' procedure!" pos
@@ -158,7 +130,8 @@ evalApp pos ident args = do
         (argVals, argsByVal) <- evalFunArgsAsValues pos args args'
         (argLocs, argsByRef) <- evalFunArgsAsRefs pos args args'
         newEnv <- bindArgsToEnv pos argsByVal argVals argsByRef argLocs envVar'
-        local (const (newEnv, envProc)) (evalBlock block)
+        will_return <- if stringFunctionType ret == "void" then return False else return True
+        local (const (newEnv, envProc)) (evalBlock will_return block)
 
 evalFunArgsAsValues :: BNFC'Position -> [FunArg] -> [Arg] -> RSE ([ELit], [Arg])
 evalFunArgsAsValues pos args idfs = do
@@ -218,13 +191,14 @@ printLnImpl pos args = do
         _ -> makeError "Wrong argument type" pos
     _ -> makeError "Wrong number of arguments" pos
 
-evalBlock :: Block -> RSE ()
-evalBlock (Block_T pos stmts) = do
-  evalStmts pos stmts
+evalBlock :: Bool -> Block -> RSE ()
+evalBlock will_return (Block_T pos stmts) = do
+  evalStmts will_return pos stmts
 
-evalStmts :: BNFC'Position -> [Stmt] -> RSE ()
-evalStmts _ [] = return ()
-evalStmts pos (stmt : stmts) = do
+evalStmts :: Bool -> BNFC'Position -> [Stmt] -> RSE ()
+evalStmts False _ [] = return ()
+evalStmts True pos [] = makeError "Missing return statement" pos
+evalStmts will_return pos (stmt : stmts) = do
   case stmt of
     Decl_T pos_decl typ ident expr -> do
       evaluatedExpr <- evalExpr expr
@@ -238,52 +212,52 @@ evalStmts pos (stmt : stmts) = do
           put (M.insert newLoc (typ, evaluatedExpr) stVar)
           let envVar' = M.insert ident newLoc envVar
           let newEnv = (envVar', envProc)
-          local (const newEnv) (evalStmts pos stmts)
+          local (const newEnv) (evalStmts will_return pos stmts)
       else do
         makeError "Type mismatch" pos_decl
     _notDecl -> do
-      evalStmt stmt
-      evalStmts pos stmts
+      evalStmt will_return stmt
+      evalStmts will_return pos stmts
 
-evalStmt :: Stmt -> RSE ()
-evalStmt (Empty_T _) = return ()
+evalStmt :: Bool -> Stmt -> RSE ()
+evalStmt _ (Empty_T _) = return ()
 
-evalStmt (BStmt_T _ block) = do
-  evalBlock block
+evalStmt will_return (BStmt_T _ block) = do
+  evalBlock will_return block
 
-evalStmt Decl_T {} = undefined
+evalStmt _ Decl_T {} = undefined
 
-evalStmt (App_T pos ident args) = do
+evalStmt _ (App_T pos ident args) = do
   evalApp pos ident args
 
-evalStmt (Decr_T pos ident) = modifyVariable pos ident (\x -> x - 1)
+evalStmt _ (Decr_T pos ident) = modifyVariable pos ident (\x -> x - 1)
 
-evalStmt (Incr_T pos ident) = modifyVariable pos ident (+ 1)
+evalStmt _ (Incr_T pos ident) = modifyVariable pos ident (+ 1)
 
-evalStmt (Cond_T pos expr block) = do
+evalStmt will_return (Cond_T pos expr block) = do
   val <- evalExpr expr
   case val of
-    ELitBool_T _ (ELitTrue_T _) -> evalBlock block
+    ELitBool_T _ (ELitTrue_T _) -> evalBlock will_return block
     ELitBool_T _ (ELitFalse_T _) -> return ()
     _CondType -> makeError "Wrong condition type" pos
 
-evalStmt (CondElse_T pos expr block1 block2) = do
+evalStmt will_return (CondElse_T pos expr block1 block2) = do
   val <- evalExpr expr
   case val of
-    ELitBool_T _ (ELitTrue_T _) -> evalBlock block1
-    ELitBool_T _ (ELitFalse_T _) -> evalBlock block2
+    ELitBool_T _ (ELitTrue_T _) -> evalBlock will_return block1
+    ELitBool_T _ (ELitFalse_T _) -> evalBlock will_return block2
     _CondType -> makeError "Wrong condition type" pos
 
-evalStmt (While_T pos expr block) = do
+evalStmt will_return (While_T pos expr block) = do
   val <- evalExpr expr
   case val of
     ELitBool_T _ (ELitTrue_T _) -> do
-      evalBlock block
-      evalStmt (While_T pos expr block)
+      evalBlock will_return block
+      evalStmt will_return (While_T pos expr block)
     ELitBool_T _ (ELitFalse_T _) -> return ()
     _CondType -> makeError "Wrong condition type" pos
 
-evalStmt (Ass_T pos ident expr) = do
+evalStmt _ (Ass_T pos ident expr) = do
   (envVar, envProc) <- ask
   stVar <- get
   val <- evalExpr expr
@@ -298,7 +272,12 @@ evalStmt (Ass_T pos ident expr) = do
         Nothing -> makeError "Variable not in scope" pos
   return ()
 
-evalStmt (SExp_T _ expr) = undefined
+evalStmt will_return (Return_T pos expr) = do
+  if will_return then do 
+    val <- evalExpr expr 
+    
+
+evalStmt _ (SExp_T _ expr) = undefined
 
 modifyVariable :: BNFC'Position -> Ident -> (Integer -> Integer) -> RSE ()
 modifyVariable pos ident modifyFn = do
@@ -461,8 +440,8 @@ printProcArg = undefined
 
 initialEnvProc :: EnvProc
 initialEnvProc =
-  M.insert (Ident "print") (printProcArg, printBlock, initialEnvVar)
-  (M.insert (Ident "print_line") (printProcArg, printBlock, initialEnvVar)
+  M.insert (Ident "print") (FunRetVoid_T BNFC'NoPosition, printProcArg, printBlock, initialEnvVar)
+  (M.insert (Ident "print_line") (FunRetVoid_T BNFC'NoPosition, printProcArg, printBlock, initialEnvVar)
   M.empty)
 
 initialEnv :: Env
