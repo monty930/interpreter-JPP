@@ -7,4 +7,4 @@ Proc main() {
     P(arg, 'c', "wrong type");
 }
 
-// Expected: Type mismatch
+// Expected: Wrong argument type

@@ -11,4 +11,4 @@ Proc main() {
 }
 
 // Expected:
-// Operation not permitted
+// Wrong operation argument

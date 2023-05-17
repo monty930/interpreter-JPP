@@ -1,7 +1,7 @@
 Proc f(int y) {
     y++;
     print_line((string) y);
-    z = 3; // dynamic binding
+    int z = 3; // static binding (dynamic would cause redeclaration)
     if (y == 2) {
         f(&z);
     }

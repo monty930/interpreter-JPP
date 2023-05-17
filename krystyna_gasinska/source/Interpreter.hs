@@ -80,19 +80,18 @@ makeError message bnfcPos = do
 
 interpretProgram :: Program -> RSE ()
 interpretProgram (Program_T _ topdefs) = do
-  evalTopDefs topdefs
-  evalApp BNFC'NoPosition (Ident "main") []
-  return ()
+  env <- evalTopDefs topdefs
+  local (const env) (evalApp BNFC'NoPosition (Ident "main") [])
 
-evalTopDefs :: [TopDef] -> RSE ()
-evalTopDefs [] = return ()
+evalTopDefs :: [TopDef] -> RSE Env
+evalTopDefs [] = ask
 evalTopDefs (topdef : topdefs) = do
   case topdef of
     ProcDef_T pos ident args block -> do
       (envVar, envProc) <- ask
       -- check if procedure is already defined
       case M.lookup ident envProc of
-        Just _ -> makeError ("Procedure " ++ show ident ++ " already defined") pos
+        Just _ -> makeError ("Procedure " ++ getIdentString ident ++ " already defined") pos
         Nothing -> do
           -- add procedure to environment
           let envProc' = M.insert ident (args, block, envVar) envProc
@@ -112,7 +111,7 @@ bindArgsToEnv pos (arg : args) (val : vals) refs locs envVar = do
     let newEnv = (envVar', envProc)
     local (const newEnv) (bindArgsToEnv pos args vals refs locs envVar')
   else do
-    makeError "wrong argument type" pos
+    makeError "Wrong argument type" pos
 
 bindArgsToEnv pos args vals (ref : refs) (loc : locs) envVar = do
   stVar <- get
@@ -129,7 +128,7 @@ bindArgsToEnv pos args vals (ref : refs) (loc : locs) envVar = do
       makeError "Variable not in scope" pos
 
 bindArgsToEnv pos _ _ _ _ _ = do
-  error "wrong number of arguments" pos
+  error "Wrong number of arguments" pos
 
 evalApp :: BNFC'Position -> Ident -> [FunArg] -> RSE ()
 evalApp pos ident args = do
@@ -141,7 +140,7 @@ evalApp pos ident args = do
           Nothing ->
             case pos of
               BNFC'NoPosition -> makeError "There is no 'main' procedure!" pos
-              _ -> makeError ("Procedure " ++ show ident ++ " does not exist") pos
+              _ -> makeError ("Procedure " ++ getIdentString ident ++ " does not exist") pos
         (argVals, argsByVal) <- evalFunArgsAsValues pos args args'
         (argLocs, argsByRef) <- evalFunArgsAsRefs pos args args'
         newEnv <- bindArgsToEnv pos argsByVal argVals argsByRef argLocs envVar'
@@ -160,10 +159,10 @@ evalFunArgsAsValuesAcc pos (arg : args) (idf : idfs) (argVals, argsByVal) = do
       val <- evalExpr expr
       evalFunArgsAsValuesAcc pos args idfs (argVals ++ [val], argsByVal ++ [idf])
     AsRef_T pos var -> do
-      makeError "wrong argument type" pos
+      evalFunArgsAsValuesAcc pos args idfs (argVals, argsByVal)
 
 evalFunArgsAsValuesAcc pos _ _ _ = do
-  makeError "wrong number of arguments" pos
+  makeError "Wrong number of arguments" pos
 
 evalFunArgsAsRefs :: BNFC'Position -> [FunArg] -> [Arg] -> RSE ([Loc], [Arg])
 evalFunArgsAsRefs pos args idfs = do
@@ -175,13 +174,13 @@ evalFunArgsAsRefsAcc _ [] [] acc = return acc
 evalFunArgsAsRefsAcc pos (arg : args) (idf : idfs) (argLocs, argsByRef) = do
   case arg of
     AsValue_T pos expr -> do
-      makeError "wrong argument type" pos
+      evalFunArgsAsRefsAcc pos args idfs (argLocs, argsByRef)
     AsRef_T pos var -> do
       loc <- evalVar var
       evalFunArgsAsRefsAcc pos args idfs (argLocs ++ [loc], argsByRef ++ [idf])
 
 evalFunArgsAsRefsAcc pos _ _ _ = do
-  error "wrong number of arguments" pos
+  error "Wrong number of arguments" pos
 
 printImpl :: BNFC'Position -> [FunArg] -> RSE ()
 printImpl pos args = do
@@ -222,7 +221,7 @@ evalStmts pos (stmt : stmts) = do
 
           -- check if redeclaration
           case M.lookup ident envVar of
-            Just _ -> makeError ("Variable " ++ show ident ++ " already declared") pos_decl
+            Just _ -> makeError ("Variable " ++ getIdentString ident ++ " already declared") pos_decl
             Nothing -> return ()
 
           -- add variable to environment
@@ -297,21 +296,21 @@ modifyVariable pos ident modifyFn = do
   stVar <- get
   (envVar, envProc) <- ask
   case M.lookup ident envVar of
-    Nothing -> makeError ("Variable " ++ show ident ++ " not in scope") pos
+    Nothing -> makeError ("Variable " ++ getIdentString ident ++ " not in scope") pos
     Just loc -> do
       case M.lookup loc stVar of
-        Nothing -> makeError ("Variable " ++ show ident ++ " not in scope") pos
+        Nothing -> makeError ("Variable " ++ getIdentString ident ++ " not in scope") pos
         Just (type_, val) -> do
           case val of
             ELitInt_T pos val' -> do
               put (M.insert loc (type_, ELitInt_T pos (modifyFn val')) stVar)
-            _ -> makeError ("Variable " ++ show ident ++ " is not an integer") pos
+            _ -> makeError ("Variable " ++ getIdentString ident ++ " is not an integer") pos
 
 evalVar :: Var -> RSE Loc
 evalVar (Var_T pos ident) = do
   (envVar, envProc) <- ask
   case M.lookup ident envVar of
-    Nothing -> makeError ("Variable " ++ show ident ++ " not in scope") pos
+    Nothing -> makeError ("Variable " ++ getIdentString ident ++ " not in scope") pos
     Just loc -> return loc
 
 evalExpr :: Expr -> RSE ELit
@@ -337,7 +336,7 @@ evalExpr (Not_T pos expr) = do
     ELitBool_T _ (ELitFalse_T _) -> return (ELitBool_T pos (ELitTrue_T pos))
     _ -> makeError "Wrong operation argument" pos
 
-evalExpr (EMul_T pos expr1 mulOp expr2) = do 
+evalExpr (EMul_T pos expr1 mulOp expr2) = do
   val1 <- evalExpr expr1
   val2 <- evalExpr expr2
   case (val1, val2) of
@@ -359,10 +358,14 @@ evalExpr (EAdd_T pos expr1 addOp expr2) = do
       case addOp of
         Plus_T _ -> return (ELitInt_T pos (val1' + val2'))
         Minus_T _ -> return (ELitInt_T pos (val1' - val2'))
+    (EString_T _ val1', EString_T _ val2') -> do
+      case addOp of
+        Plus_T _ -> return (EString_T pos (val1' ++ val2'))
+        _ -> makeError "Wrong operation argument" pos
     _ -> makeError "Wrong operation argument" pos
 
 evalExpr (EOr_T pos expr1 expr2) = do
-  val1 <- evalExpr expr1 
+  val1 <- evalExpr expr1
   case val1 of
     ELitBool_T _ (ELitTrue_T _) -> return (ELitBool_T pos (ELitTrue_T pos))
     ELitBool_T _ (ELitFalse_T _) -> do
@@ -374,7 +377,7 @@ evalExpr (EOr_T pos expr1 expr2) = do
     _ -> makeError "Wrong operation argument" pos
 
 evalExpr (EAnd_T pos expr1 expr2) = do
-  val1 <- evalExpr expr1 
+  val1 <- evalExpr expr1
   case val1 of
     ELitBool_T _ (ELitFalse_T _) -> return (ELitBool_T pos (ELitFalse_T pos))
     ELitBool_T _ (ELitTrue_T _) -> do
@@ -385,10 +388,10 @@ evalExpr (EAnd_T pos expr1 expr2) = do
         _ -> makeError "Wrong operation argument" pos
     _ -> makeError "Wrong operation argument" pos
 
-evalExpr (ERel_T pos expr1 relOp expr2) = do 
+evalExpr (ERel_T pos expr1 relOp expr2) = do
   val1 <- evalExpr expr1
   val2 <- evalExpr expr2
-  case (val1, val2) of 
+  case (val1, val2) of
     (ELitInt_T _ val1', ELitInt_T _ val2') -> do
       case relOp of
         LTH_T _ -> return (ELitBool_T pos (if val1' < val2' then ELitTrue_T pos else ELitFalse_T pos))
@@ -397,20 +400,43 @@ evalExpr (ERel_T pos expr1 relOp expr2) = do
         GE_T _ -> return (ELitBool_T pos (if val1' >= val2' then ELitTrue_T pos else ELitFalse_T pos))
         EQU_T _ -> return (ELitBool_T pos (if val1' == val2' then ELitTrue_T pos else ELitFalse_T pos))
         NE_T _ -> return (ELitBool_T pos (if val1' /= val2' then ELitTrue_T pos else ELitFalse_T pos))
-    _wrong_type -> makeError "Wrong operation argument" pos
+    (EChar_T _ val1', EChar_T _ val2') -> do
+      case relOp of
+        EQU_T _ -> return (ELitBool_T pos (if val1' == val2' then ELitTrue_T pos else ELitFalse_T pos))
+        NE_T _ -> return (ELitBool_T pos (if val1' /= val2' then ELitTrue_T pos else ELitFalse_T pos))
+        _ -> makeError "Wrong operation argument" pos
+    (EString_T _ val1', EString_T _ val2') -> do
+      case relOp of
+        EQU_T _ -> return (ELitBool_T pos (if val1' == val2' then ELitTrue_T pos else ELitFalse_T pos))
+        NE_T _ -> return (ELitBool_T pos (if val1' /= val2' then ELitTrue_T pos else ELitFalse_T pos))
+        _ -> makeError "Wrong operation argument" pos
+    (ELitBool_T _ val1', ELitBool_T _ val2') -> do
+      case relOp of
+        EQU_T _ -> return (ELitBool_T pos (if val1' == val2' then ELitTrue_T pos else ELitFalse_T pos))
+        NE_T _ -> return (ELitBool_T pos (if val1' /= val2' then ELitTrue_T pos else ELitFalse_T pos))
+        _ -> makeError "Wrong operation argument" pos
+    _ -> makeError "Wrong operation argument" pos
+
 
 evalExpr (ECast_T pos type_ expr) = do
   val <- evalExpr expr
-  case (val, type_) of 
+  case (val, type_) of
     (ELitInt_T _ val', Int_T _) -> return val
-    (ELitInt_T _ val', CharT_T _) -> return (EChar_T pos (chr (fromInteger val')))
+    (ELitInt_T _ val', CharT_T _) -> do
+      if val' < 0 || val' > 1114111
+        then makeError "Integer too big to convert" pos
+        else
+          return (EChar_T pos (chr (fromInteger val')))
     (ELitInt_T _ val', Str_T _) -> return (EString_T pos (show val'))
     (ELitInt_T _ val', Bool_T _) -> return (ELitBool_T pos (if val' == 0 then ELitFalse_T pos else ELitTrue_T pos))
     (EChar_T _ val', Int_T _) -> return (ELitInt_T pos (toInteger (ord val')))
     (EChar_T _ val', CharT_T _) -> return val
     (EChar_T _ val', Str_T _) -> return (EString_T pos [val'])
-    (ELitBool_T _ val', Int_T _) -> return (ELitInt_T pos (if val' == ELitFalse_T pos then 0 else 1))
-    (ELitBool_T _ val', Str_T _) -> return (EString_T pos (if val' == ELitFalse_T pos then "0" else "1"))
+    (ELitBool_T _ val', Int_T _) -> do
+      case val' of
+        ELitTrue_T _ -> return (ELitInt_T pos 1)
+        ELitFalse_T _ -> return (ELitInt_T pos 0)
+    (ELitBool_T _ val', Str_T _) -> return (EString_T pos (if val' == ELitFalse_T pos then "False" else "True"))
     (ELitBool_T _ val', Bool_T _) -> return val
     (EString_T _ val', Str_T _) -> return val
     _wrong_type -> makeError "Wrong cast argument" pos
@@ -453,26 +479,26 @@ main = do
 --   stVar <- get
 --   (envVar, envProc) <- ask
 --   case M.lookup ident envVar of 
---     Nothing -> makeError ("Variable " ++ show ident ++ " not in scope") pos
+--     Nothing -> makeError ("Variable " ++ getIdentString ident ++ " not in scope") pos
 --     Just loc -> do
 --       case M.lookup loc stVar of
---         Nothing -> makeError ("Variable " ++ show ident ++ " not in scope") pos
+--         Nothing -> makeError ("Variable " ++ getIdentString ident ++ " not in scope") pos
 --         Just (type_, val) -> do
 --           case val of
 --             ELitInt_T pos val -> do
 --               put (M.insert loc (type_, ELitInt_T pos (val - 1)) stVar)
---             _ -> makeError ("Variable " ++ show ident ++ " is not an integer") pos
+--             _ -> makeError ("Variable " ++ getIdentString ident ++ " is not an integer") pos
 
 -- evalStmt (Incr_T pos ident) = do
 --   stVar <- get
 --   (envVar, envProc) <- ask
 --   case M.lookup ident envVar of 
---     Nothing -> makeError ("Variable " ++ show ident ++ " not in scope") pos
+--     Nothing -> makeError ("Variable " ++ getIdentString ident ++ " not in scope") pos
 --     Just loc -> do
 --       case M.lookup loc stVar of
---         Nothing -> makeError ("Variable " ++ show ident ++ " not in scope") pos
+--         Nothing -> makeError ("Variable " ++ getIdentString ident ++ " not in scope") pos
 --         Just (type_, val) -> do
 --           case val of
 --             ELitInt_T pos val -> do
 --               put (M.insert loc (type_, ELitInt_T pos (val + 1)) stVar)
---             _ -> makeError ("Variable " ++ show ident ++ " is not an integer") pos
+--             _ -> makeError ("Variable " ++ getIdentString ident ++ " is not an integer") pos

@@ -10,4 +10,4 @@ Proc main() {
 
 // Expected:
 // Hello World
-// Operation not permitted
+// Wrong operation argument

@@ -1,14 +1,24 @@
-Proc rec() {
+Proc rec(int z) {
+    print_line("Inside with value " + (string) z);
+    z++;
+    if (z < 4) {
+        rec(z)
+    }
+}
+
+Proc R2(int y) {
     print_line("Inside with value " + (string) y);
     y++;
-    if (y < 5) {
-        rec()
+    if (y < 4) {
+        rec(y)
     }
 }
 
 Proc main() {
     int y = 0;
-    rec();
+    rec(& y);
+    print_line("");
+    R2(y)
 }
 
 /*
@@ -17,5 +27,8 @@ Inside with value 0
 Inside with value 1
 Inside with value 2
 Inside with value 3
-Inside with value 4
+
+Inside with value 1
+Inside with value 2
+Inside with value 3
 */

@@ -10,4 +10,4 @@ Proc main() {
     print_line((string) arg);
 }
 
-// Expected: Type mismatch
+// Expected: Wrong argument type
