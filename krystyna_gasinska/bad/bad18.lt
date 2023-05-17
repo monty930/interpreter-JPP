@@ -18,5 +18,5 @@ Proc main() {
 /* expected: 
     3
     4
-    Type mismatch
+    Wrong argument type
 */

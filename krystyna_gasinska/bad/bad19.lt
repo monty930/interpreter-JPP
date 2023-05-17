@@ -9,4 +9,4 @@ Proc main () {
 
 // Expected:
 // in if
-// Type mismatch
+// Wrong condition type

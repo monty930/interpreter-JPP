@@ -7,4 +7,4 @@ Proc main() {
 
 // Expected:
 // 0
-// Redeclaration of variable
+// Variable x already declared

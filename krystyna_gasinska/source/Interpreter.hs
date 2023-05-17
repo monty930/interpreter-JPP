@@ -190,8 +190,8 @@ printImpl pos args = do
       val <- evalExpr expr
       case val of
         EString_T pos str -> liftIO $ putStr str
-        _ -> makeError "wrong argument type" pos
-    _ -> makeError "wrong number of arguments" pos
+        _ -> makeError "Wrong argument type" pos
+    _ -> makeError "Wrong number of arguments" pos
 
 printLnImpl :: BNFC'Position -> [FunArg] -> RSE ()
 printLnImpl pos args = do
@@ -201,8 +201,8 @@ printLnImpl pos args = do
       val <- evalExpr expr
       case val of
         EString_T pos str -> liftIO $ putStr (str ++ "\n")
-        _ -> makeError "wrong argument type" pos
-    _ -> makeError "wrong number of arguments" pos
+        _ -> makeError "Wrong argument type" pos
+    _ -> makeError "Wrong number of arguments" pos
 
 evalBlock :: Block -> RSE ()
 evalBlock (Block_T pos stmts) = do
@@ -256,14 +256,14 @@ evalStmt (Cond_T pos expr block) = do
   case val of
     ELitBool_T _ (ELitTrue_T _) -> evalBlock block
     ELitBool_T _ (ELitFalse_T _) -> return ()
-    _CondType -> makeError "wrong condition type" pos
+    _CondType -> makeError "Wrong condition type" pos
 
 evalStmt (CondElse_T pos expr block1 block2) = do
   val <- evalExpr expr
   case val of
     ELitBool_T _ (ELitTrue_T _) -> evalBlock block1
     ELitBool_T _ (ELitFalse_T _) -> evalBlock block2
-    _CondType -> makeError "wrong condition type" pos
+    _CondType -> makeError "Wrong condition type" pos
 
 evalStmt (While_T pos expr block) = do
   val <- evalExpr expr
@@ -272,7 +272,7 @@ evalStmt (While_T pos expr block) = do
       evalBlock block
       evalStmt (While_T pos expr block)
     ELitBool_T _ (ELitFalse_T _) -> return ()
-    _CondType -> makeError "wrong condition type" pos
+    _CondType -> makeError "Wrong condition type" pos
 
 evalStmt (Ass_T pos ident expr) = do
   (envVar, envProc) <- ask

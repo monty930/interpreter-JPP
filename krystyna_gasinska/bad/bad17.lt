@@ -1,5 +1,5 @@
 Proc f(int y) {
-    z = 'c'; // dynamic identifiers binding
+    y = 'c';
 }
 
 Proc main() {

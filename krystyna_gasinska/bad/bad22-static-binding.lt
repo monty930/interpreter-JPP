@@ -17,5 +17,4 @@ Proc main() {
 
 // expected: 
 // 2
-// 4
 // Variable not in scope
