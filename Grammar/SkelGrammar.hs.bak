@@ -48,6 +48,7 @@ transStmt x = case x of
   AbsGrammar.CondElse_T _ expr block1 block2 -> failure x
   AbsGrammar.While_T _ expr block -> failure x
   AbsGrammar.App_T _ ident funargs -> failure x
+  AbsGrammar.Return_T _ expr -> failure x
   AbsGrammar.SExp_T _ expr -> failure x
 
 transType :: Show a => AbsGrammar.Type' a -> Result

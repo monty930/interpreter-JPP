@@ -36,7 +36,7 @@ The set of reserved words is the set of terminals appearing in the grammar. Thos
 The reserved words used in grammar are the following:
   | ``Glob`` | ``Proc`` | ``bool`` | ``char``
   | ``else`` | ``false`` | ``if`` | ``int``
-  | ``string`` | ``true`` | ``while`` |
+  | ``return`` | ``string`` | ``true`` | ``while``
 
 The symbols used in grammar are the following:
   | ( | ) | = | ;
@@ -77,6 +77,7 @@ All other symbols are terminals.
   |  |  **|**  | ``if`` ``(`` //Expr// ``)`` //Block// ``else`` //Block//
   |  |  **|**  | ``while`` ``(`` //Expr// ``)`` //Block//
   |  |  **|**  | //Ident// ``(`` //[FunArg]// ``)``
+  |  |  **|**  | ``return`` ``(`` //Expr// ``)``
   |  |  **|**  | //Expr// ``;``
   | //Type// | -> | ``int``
   |  |  **|**  | ``char``

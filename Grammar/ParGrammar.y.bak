@@ -52,12 +52,13 @@ import LexGrammar
   'false'  { PT _ (TS _ 27) }
   'if'     { PT _ (TS _ 28) }
   'int'    { PT _ (TS _ 29) }
-  'string' { PT _ (TS _ 30) }
-  'true'   { PT _ (TS _ 31) }
-  'while'  { PT _ (TS _ 32) }
-  '{'      { PT _ (TS _ 33) }
-  '||'     { PT _ (TS _ 34) }
-  '}'      { PT _ (TS _ 35) }
+  'return' { PT _ (TS _ 30) }
+  'string' { PT _ (TS _ 31) }
+  'true'   { PT _ (TS _ 32) }
+  'while'  { PT _ (TS _ 33) }
+  '{'      { PT _ (TS _ 34) }
+  '||'     { PT _ (TS _ 35) }
+  '}'      { PT _ (TS _ 36) }
   L_Ident  { PT _ (TV _)    }
   L_charac { PT _ (TC _)    }
   L_integ  { PT _ (TI _)    }
@@ -122,6 +123,7 @@ Stmt
   | 'if' '(' Expr ')' Block 'else' Block { (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1), AbsGrammar.CondElse_T (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1)) (snd $3) (snd $5) (snd $7)) }
   | 'while' '(' Expr ')' Block { (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1), AbsGrammar.While_T (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1)) (snd $3) (snd $5)) }
   | Ident '(' ListFunArg ')' { (fst $1, AbsGrammar.App_T (fst $1) (snd $1) (snd $3)) }
+  | 'return' '(' Expr ')' { (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1), AbsGrammar.Return_T (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1)) (snd $3)) }
   | Expr ';' { (fst $1, AbsGrammar.SExp_T (fst $1) (snd $1)) }
 
 Type :: { (AbsGrammar.BNFC'Position, AbsGrammar.Type) }

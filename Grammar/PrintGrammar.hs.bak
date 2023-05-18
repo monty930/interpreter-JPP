@@ -182,6 +182,7 @@ instance Print (AbsGrammar.Stmt' a) where
     AbsGrammar.CondElse_T _ expr block1 block2 -> prPrec i 0 (concatD [doc (showString "if"), doc (showString "("), prt 0 expr, doc (showString ")"), prt 0 block1, doc (showString "else"), prt 0 block2])
     AbsGrammar.While_T _ expr block -> prPrec i 0 (concatD [doc (showString "while"), doc (showString "("), prt 0 expr, doc (showString ")"), prt 0 block])
     AbsGrammar.App_T _ id_ funargs -> prPrec i 0 (concatD [prt 0 id_, doc (showString "("), prt 0 funargs, doc (showString ")")])
+    AbsGrammar.Return_T _ expr -> prPrec i 0 (concatD [doc (showString "return"), doc (showString "("), prt 0 expr, doc (showString ")")])
     AbsGrammar.SExp_T _ expr -> prPrec i 0 (concatD [prt 0 expr, doc (showString ";")])
 
 instance Print (AbsGrammar.Type' a) where

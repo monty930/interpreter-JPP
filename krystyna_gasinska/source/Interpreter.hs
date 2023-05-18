@@ -75,7 +75,8 @@ evalTopDefs (topdef : topdefs) = do
     GlobVar_T pos type_ ident expr -> do
       (envVar, envProc) <- ask
       stVar <- get
-      val <- evalExpr expr
+      retFromExpr <- evalExpr expr
+      val <- getValFromExpr retFromExpr
       -- check types
       if stringTypeOfType type_ == stringTypeOfElit val
         then do
@@ -154,7 +155,8 @@ evalFunArgsAsValuesAcc pos [] [] acc = return acc
 evalFunArgsAsValuesAcc pos (arg : args) (idf : idfs) (argVals, argsByVal) = do
   case arg of
     AsValue_T pos expr -> do
-      val <- evalExpr expr
+      retFromExpr <- evalExpr expr
+      val <- getValFromExpr retFromExpr
       evalFunArgsAsValuesAcc pos args idfs (argVals ++ [val], argsByVal ++ [idf])
     AsRef_T pos var -> do
       evalFunArgsAsValuesAcc pos args idfs (argVals, argsByVal)
@@ -185,7 +187,8 @@ printImpl pos args = do
   case args of
     [arg] -> do
       (AsValue_T pos expr) <- return arg
-      val <- evalExpr expr
+      retFromExpr <- evalExpr expr
+      val <- getValFromExpr retFromExpr
       case val of
         EString_T pos str -> do
           liftIO $ putStr str
@@ -198,7 +201,8 @@ printLnImpl pos args = do
   case args of
     [arg] -> do
       (AsValue_T pos expr) <- return arg
-      val <- evalExpr expr
+      retFromExpr <- evalExpr expr
+      val <- getValFromExpr retFromExpr
       case val of
         EString_T pos str -> do
           liftIO $ putStr (str ++ "\n")
@@ -216,7 +220,8 @@ evalStmts True pos [] = makeError "Missing return statement" pos
 evalStmts will_return pos (stmt : stmts) = do
   case stmt of
     Decl_T pos_decl typ ident expr -> do
-      evaluatedExpr <- evalExpr expr
+      retFromExpr <- evalExpr expr
+      evaluatedExpr <- getValFromExpr (retFromExpr)
       if stringTypeOfType typ == stringTypeOfElit evaluatedExpr
         then do
           (envVar, envProc) <- ask
@@ -245,9 +250,6 @@ evalStmt will_return (BStmt_T _ block) = do
 
 evalStmt _ Decl_T {} = undefined
 
-evalStmt _ (App_T pos ident args) = do
-  evalApp pos ident args
-
 evalStmt _ (Decr_T pos ident) = do
   modifyVariable pos ident (\x -> x - 1)
   return NoRet
@@ -257,21 +259,24 @@ evalStmt _ (Incr_T pos ident) = do
   return NoRet
 
 evalStmt will_return (Cond_T pos expr block) = do
-  val <- evalExpr expr
+  retFromExpr <- evalExpr expr
+  val <- getValFromExpr retFromExpr
   case val of
     ELitBool_T _ (ELitTrue_T _) -> evalBlock will_return block
     ELitBool_T _ (ELitFalse_T _) -> return NoRet
     _CondType -> makeError "Wrong condition type" pos
 
 evalStmt will_return (CondElse_T pos expr block1 block2) = do
-  val <- evalExpr expr
+  retFromExpr <- evalExpr expr
+  val <- getValFromExpr retFromExpr
   case val of
     ELitBool_T _ (ELitTrue_T _) -> evalBlock will_return block1
     ELitBool_T _ (ELitFalse_T _) -> evalBlock will_return block2
     _CondType -> makeError "Wrong condition type" pos
 
 evalStmt will_return (While_T pos expr block) = do
-  val <- evalExpr expr
+  retFromExpr <- evalExpr expr
+  val <- getValFromExpr retFromExpr
   case val of
     ELitBool_T _ (ELitTrue_T _) -> do
       evalBlock will_return block
@@ -282,7 +287,8 @@ evalStmt will_return (While_T pos expr block) = do
 evalStmt _ (Ass_T pos ident expr) = do
   (envVar, envProc) <- ask
   stVar <- get
-  val <- evalExpr expr
+  retFromExpr <- evalExpr expr
+  val <- getValFromExpr retFromExpr
   case M.lookup ident envVar of
     Nothing -> makeError "Variable not in scope" pos
     Just loc -> do
@@ -296,13 +302,14 @@ evalStmt _ (Ass_T pos ident expr) = do
 
 evalStmt will_return (Return_T pos expr) = do
   if will_return then do 
-    val <- evalExpr expr 
+    retFromExpr <- evalExpr expr
+    val <- getValFromExpr retFromExpr
     return (Ret val)
   else do
     makeError "Unexpected return" pos
-    
 
-evalStmt _ (SExp_T _ expr) = undefined
+evalStmt _ (SExp_T _ expr) = do 
+  evalExpr expr
 
 modifyVariable :: BNFC'Position -> Ident -> (Integer -> Integer) -> RSE ()
 modifyVariable pos ident modifyFn = do
@@ -326,133 +333,157 @@ evalVar (Var_T pos ident) = do
     Nothing -> makeError ("Variable " ++ getIdentString ident ++ " not in scope") pos
     Just loc -> return loc
 
-evalExpr :: Expr -> RSE ELit
+getValFromExpr :: BlockReturn -> RSE ELit
+getValFromExpr (Ret val) = do
+  return val
+getValFromExpr NoRet = makeError "No return value" BNFC'NoPosition
+
+evalExpr :: Expr -> RSE BlockReturn
 evalExpr (EVar_T pos var) = do
   loc <- evalVar var
   stVar <- get
   case M.lookup loc stVar of
     Nothing -> makeError "Variable not in scope" pos
-    Just (_, val) -> return val
+    Just (_, val) -> return (Ret val)
 
-evalExpr (ELit_T _ lit) = return lit
+evalExpr (ELit_T _ lit) = return (Ret lit)
 
 evalExpr (Neg_T pos expr) = do
-  val <- evalExpr expr
+  retFromExpr <- evalExpr expr
+  val <- getValFromExpr retFromExpr
   case val of
-    ELitInt_T _ val -> return (ELitInt_T pos (- val))
+    ELitInt_T _ val -> return (Ret (ELitInt_T pos (- val)))
     _ -> makeError "Wrong operation argument" pos
 
 evalExpr (Not_T pos expr) = do
-  val <- evalExpr expr
+  retFromExpr <- evalExpr expr
+  val <- getValFromExpr retFromExpr
   case val of
-    ELitBool_T _ (ELitTrue_T _) -> return (ELitBool_T pos (ELitFalse_T pos))
-    ELitBool_T _ (ELitFalse_T _) -> return (ELitBool_T pos (ELitTrue_T pos))
+    ELitBool_T _ (ELitTrue_T _) -> return (Ret (ELitBool_T pos (ELitFalse_T pos)))
+    ELitBool_T _ (ELitFalse_T _) -> return (Ret (ELitBool_T pos (ELitTrue_T pos)))
     _ -> makeError "Wrong operation argument" pos
 
 evalExpr (EMul_T pos expr1 mulOp expr2) = do
-  val1 <- evalExpr expr1
-  val2 <- evalExpr expr2
+  retFromExpr1 <- evalExpr expr1
+  val1 <- getValFromExpr retFromExpr1
+  retFromExpr2 <- evalExpr expr2
+  val2 <- getValFromExpr retFromExpr2
   case (val1, val2) of
     (ELitInt_T _ val1', ELitInt_T _ val2') -> do
       case mulOp of
-        Times_T _ -> return (ELitInt_T pos (val1' * val2'))
+        Times_T _ -> return (Ret (ELitInt_T pos (val1' * val2')))
         Div_T _ -> do
           if val2' == 0
             then makeError "Division by zero" pos
-            else return (ELitInt_T pos (val1' `div` val2'))
-        Mod_T _ -> return (ELitInt_T pos (val1' `mod` val2'))
+            else return (Ret (ELitInt_T pos (val1' `div` val2')))
+        Mod_T _ -> return (Ret (ELitInt_T pos (val1' `mod` val2')))
     _ -> makeError "Wrong operation argument" pos
 
 evalExpr (EAdd_T pos expr1 addOp expr2) = do
-  val1 <- evalExpr expr1
-  val2 <- evalExpr expr2
+  retFromExpr1 <- evalExpr expr1
+  val1 <- getValFromExpr retFromExpr1
+  retFromExpr2 <- evalExpr expr2
+  val2 <- getValFromExpr retFromExpr2
   case (val1, val2) of
     (ELitInt_T _ val1', ELitInt_T _ val2') -> do
       case addOp of
-        Plus_T _ -> return (ELitInt_T pos (val1' + val2'))
-        Minus_T _ -> return (ELitInt_T pos (val1' - val2'))
+        Plus_T _ -> return (Ret (ELitInt_T pos (val1' + val2')))
+        Minus_T _ -> return (Ret (ELitInt_T pos (val1' - val2')))
     (EString_T _ val1', EString_T _ val2') -> do
       case addOp of
-        Plus_T _ -> return (EString_T pos (val1' ++ val2'))
+        Plus_T _ -> return (Ret (EString_T pos (val1' ++ val2')))
         _ -> makeError "Wrong operation argument" pos
     _ -> makeError "Wrong operation argument" pos
 
 evalExpr (EOr_T pos expr1 expr2) = do
-  val1 <- evalExpr expr1
+  retFromExpr1 <- evalExpr expr1
+  val1 <- getValFromExpr retFromExpr1
   case val1 of
-    ELitBool_T _ (ELitTrue_T _) -> return (ELitBool_T pos (ELitTrue_T pos))
+    ELitBool_T _ (ELitTrue_T _) -> return (Ret (ELitBool_T pos (ELitTrue_T pos)))
     ELitBool_T _ (ELitFalse_T _) -> do
-      val2 <- evalExpr expr2
+      retFromExpr2 <- evalExpr expr2
+      val2 <- getValFromExpr retFromExpr2
       case val2 of
-        ELitBool_T _ (ELitTrue_T _) -> return (ELitBool_T pos (ELitTrue_T pos))
-        ELitBool_T _ (ELitFalse_T _) -> return (ELitBool_T pos (ELitFalse_T pos))
+        ELitBool_T _ (ELitTrue_T _) -> return (Ret (ELitBool_T pos (ELitTrue_T pos)))
+        ELitBool_T _ (ELitFalse_T _) -> return (Ret (ELitBool_T pos (ELitFalse_T pos)))
         _ -> makeError "Wrong operation argument" pos
     _ -> makeError "Wrong operation argument" pos
 
 evalExpr (EAnd_T pos expr1 expr2) = do
-  val1 <- evalExpr expr1
+  retFromExpr1 <- evalExpr expr1
+  val1 <- getValFromExpr retFromExpr1
   case val1 of
-    ELitBool_T _ (ELitFalse_T _) -> return (ELitBool_T pos (ELitFalse_T pos))
+    ELitBool_T _ (ELitFalse_T _) -> return (Ret (ELitBool_T pos (ELitFalse_T pos)))
     ELitBool_T _ (ELitTrue_T _) -> do
-      val2 <- evalExpr expr2
+      retFromExpr2 <- evalExpr expr2
+      val2 <- getValFromExpr retFromExpr2
       case val2 of
-        ELitBool_T _ (ELitTrue_T _) -> return (ELitBool_T pos (ELitTrue_T pos))
-        ELitBool_T _ (ELitFalse_T _) -> return (ELitBool_T pos (ELitFalse_T pos))
+        ELitBool_T _ (ELitTrue_T _) -> return (Ret (ELitBool_T pos (ELitTrue_T pos)))
+        ELitBool_T _ (ELitFalse_T _) -> return (Ret (ELitBool_T pos (ELitFalse_T pos)))
         _ -> makeError "Wrong operation argument" pos
     _ -> makeError "Wrong operation argument" pos
 
 evalExpr (ERel_T pos expr1 relOp expr2) = do
-  val1 <- evalExpr expr1
-  val2 <- evalExpr expr2
+  retFromExpr1 <- evalExpr expr1
+  val1 <- getValFromExpr retFromExpr1
+  retFromExpr2 <- evalExpr expr2
+  val2 <- getValFromExpr retFromExpr2
   case (val1, val2) of
     (ELitInt_T _ val1', ELitInt_T _ val2') -> do
       case relOp of
-        LTH_T _ -> return (ELitBool_T pos (if val1' < val2' then ELitTrue_T pos else ELitFalse_T pos))
-        LE_T _ -> return (ELitBool_T pos (if val1' <= val2' then ELitTrue_T pos else ELitFalse_T pos))
-        GTH_T _ -> return (ELitBool_T pos (if val1' > val2' then ELitTrue_T pos else ELitFalse_T pos))
-        GE_T _ -> return (ELitBool_T pos (if val1' >= val2' then ELitTrue_T pos else ELitFalse_T pos))
-        EQU_T _ -> return (ELitBool_T pos (if val1' == val2' then ELitTrue_T pos else ELitFalse_T pos))
-        NE_T _ -> return (ELitBool_T pos (if val1' /= val2' then ELitTrue_T pos else ELitFalse_T pos))
+        LTH_T _ -> return (Ret (ELitBool_T pos (if val1' < val2' then ELitTrue_T pos else ELitFalse_T pos)))
+        LE_T _ -> return (Ret (ELitBool_T pos (if val1' <= val2' then ELitTrue_T pos else ELitFalse_T pos)))
+        GTH_T _ -> return (Ret (ELitBool_T pos (if val1' > val2' then ELitTrue_T pos else ELitFalse_T pos)))
+        GE_T _ -> return (Ret (ELitBool_T pos (if val1' >= val2' then ELitTrue_T pos else ELitFalse_T pos)))
+        EQU_T _ -> return (Ret (ELitBool_T pos (if val1' == val2' then ELitTrue_T pos else ELitFalse_T pos)))
+        NE_T _ -> return (Ret (ELitBool_T pos (if val1' /= val2' then ELitTrue_T pos else ELitFalse_T pos)))
     (EChar_T _ val1', EChar_T _ val2') -> do
       case relOp of
-        EQU_T _ -> return (ELitBool_T pos (if val1' == val2' then ELitTrue_T pos else ELitFalse_T pos))
-        NE_T _ -> return (ELitBool_T pos (if val1' /= val2' then ELitTrue_T pos else ELitFalse_T pos))
+        EQU_T _ -> return (Ret (ELitBool_T pos (if val1' == val2' then ELitTrue_T pos else ELitFalse_T pos)))
+        NE_T _ -> return (Ret (ELitBool_T pos (if val1' /= val2' then ELitTrue_T pos else ELitFalse_T pos)))
         _ -> makeError "Wrong operation argument" pos
     (EString_T _ val1', EString_T _ val2') -> do
       case relOp of
-        EQU_T _ -> return (ELitBool_T pos (if val1' == val2' then ELitTrue_T pos else ELitFalse_T pos))
-        NE_T _ -> return (ELitBool_T pos (if val1' /= val2' then ELitTrue_T pos else ELitFalse_T pos))
+        EQU_T _ -> return (Ret (ELitBool_T pos (if val1' == val2' then ELitTrue_T pos else ELitFalse_T pos)))
+        NE_T _ -> return (Ret (ELitBool_T pos (if val1' /= val2' then ELitTrue_T pos else ELitFalse_T pos)))
         _ -> makeError "Wrong operation argument" pos
     (ELitBool_T _ val1', ELitBool_T _ val2') -> do
       case relOp of
-        EQU_T _ -> return (ELitBool_T pos (if val1' == val2' then ELitTrue_T pos else ELitFalse_T pos))
-        NE_T _ -> return (ELitBool_T pos (if val1' /= val2' then ELitTrue_T pos else ELitFalse_T pos))
+        EQU_T _ -> return (Ret (ELitBool_T pos (if val1' == val2' then ELitTrue_T pos else ELitFalse_T pos)))
+        NE_T _ -> return (Ret (ELitBool_T pos (if val1' /= val2' then ELitTrue_T pos else ELitFalse_T pos)))
         _ -> makeError "Wrong operation argument" pos
     _ -> makeError "Wrong operation argument" pos
 
 
 evalExpr (ECast_T pos type_ expr) = do
-  val <- evalExpr expr
+  retFromExpr <- evalExpr expr
+  val <- getValFromExpr retFromExpr
   case (val, type_) of
-    (ELitInt_T _ val', Int_T _) -> return val
+    (ELitInt_T _ val', Int_T _) -> return (Ret val)
     (ELitInt_T _ val', CharT_T _) -> do
       if val' < 0 || val' > 1114111
         then makeError "Integer too big to convert" pos
         else
-          return (EChar_T pos (chr (fromInteger val')))
-    (ELitInt_T _ val', Str_T _) -> return (EString_T pos (show val'))
-    (ELitInt_T _ val', Bool_T _) -> return (ELitBool_T pos (if val' == 0 then ELitFalse_T pos else ELitTrue_T pos))
-    (EChar_T _ val', Int_T _) -> return (ELitInt_T pos (toInteger (ord val')))
-    (EChar_T _ val', CharT_T _) -> return val
-    (EChar_T _ val', Str_T _) -> return (EString_T pos [val'])
+          return (Ret (EChar_T pos (chr (fromInteger val'))))
+    (ELitInt_T _ val', Str_T _) -> return (Ret (EString_T pos (show val')))
+    (ELitInt_T _ val', Bool_T _) -> return (Ret (ELitBool_T pos (if val' == 0 then ELitFalse_T pos else ELitTrue_T pos)))
+    (EChar_T _ val', Int_T _) -> return (Ret (ELitInt_T pos (toInteger (ord val'))))
+    (EChar_T _ val', CharT_T _) -> return (Ret val)
+    (EChar_T _ val', Str_T _) -> return (Ret (EString_T pos [val']))
     (ELitBool_T _ val', Int_T _) -> do
       case val' of
-        ELitTrue_T _ -> return (ELitInt_T pos 1)
-        ELitFalse_T _ -> return (ELitInt_T pos 0)
-    (ELitBool_T _ val', Str_T _) -> return (EString_T pos (if val' == ELitFalse_T pos then "False" else "True"))
-    (ELitBool_T _ val', Bool_T _) -> return val
-    (EString_T _ val', Str_T _) -> return val
+        ELitTrue_T _ -> return (Ret (ELitInt_T pos 1))
+        ELitFalse_T _ -> return (Ret (ELitInt_T pos 0))
+    (ELitBool_T _ val', Str_T _) -> return (Ret (EString_T pos (if val' == ELitFalse_T pos then "False" else "True")))
+    (ELitBool_T _ val', Bool_T _) -> return (Ret val)
+    (EString_T _ val', Str_T _) -> return (Ret val)
     _wrong_type -> makeError "Wrong cast argument" pos
+
+evalExpr (App_T pos ident args) = do
+  ret <- evalApp pos ident args
+  case ret of
+    Ret val -> return (Ret val)
+    NoRet -> return NoRet
 
 initialEnvVar :: EnvVar
 initialEnvVar = M.empty
@@ -487,31 +518,3 @@ main = do
   case result of
     Left err -> putStrLn $ "Parse error: " ++ err
     Right (_, _) -> return ()
-
--- evalStmt (Decr_T pos ident) = do
---   stVar <- get
---   (envVar, envProc) <- ask
---   case M.lookup ident envVar of 
---     Nothing -> makeError ("Variable " ++ getIdentString ident ++ " not in scope") pos
---     Just loc -> do
---       case M.lookup loc stVar of
---         Nothing -> makeError ("Variable " ++ getIdentString ident ++ " not in scope") pos
---         Just (type_, val) -> do
---           case val of
---             ELitInt_T pos val -> do
---               put (M.insert loc (type_, ELitInt_T pos (val - 1)) stVar)
---             _ -> makeError ("Variable " ++ getIdentString ident ++ " is not an integer") pos
-
--- evalStmt (Incr_T pos ident) = do
---   stVar <- get
---   (envVar, envProc) <- ask
---   case M.lookup ident envVar of 
---     Nothing -> makeError ("Variable " ++ getIdentString ident ++ " not in scope") pos
---     Just loc -> do
---       case M.lookup loc stVar of
---         Nothing -> makeError ("Variable " ++ getIdentString ident ++ " not in scope") pos
---         Just (type_, val) -> do
---           case val of
---             ELitInt_T pos val -> do
---               put (M.insert loc (type_, ELitInt_T pos (val + 1)) stVar)
---             _ -> makeError ("Variable " ++ getIdentString ident ++ " is not an integer") pos
