@@ -298,7 +298,9 @@ evalStmt (Ass_T pos ident expr) = do
         Nothing -> makeError "Variable not in scope" pos
   return ()
 
-evalStmt (SExp_T _ expr) = undefined
+evalStmt (SExp_T _ expr) = do
+  evalExpr expr
+  return ()
 
 modifyVariable :: BNFC'Position -> Ident -> (Integer -> Integer) -> RSE ()
 modifyVariable pos ident modifyFn = do
@@ -483,31 +485,3 @@ main = do
   case result of
     Left err -> putStrLn $ "Parse error: " ++ err
     Right (_, _) -> return ()
-
--- evalStmt (Decr_T pos ident) = do
---   stVar <- get
---   (envVar, envProc) <- ask
---   case M.lookup ident envVar of 
---     Nothing -> makeError ("Variable " ++ getIdentString ident ++ " not in scope") pos
---     Just loc -> do
---       case M.lookup loc stVar of
---         Nothing -> makeError ("Variable " ++ getIdentString ident ++ " not in scope") pos
---         Just (type_, val) -> do
---           case val of
---             ELitInt_T pos val -> do
---               put (M.insert loc (type_, ELitInt_T pos (val - 1)) stVar)
---             _ -> makeError ("Variable " ++ getIdentString ident ++ " is not an integer") pos
-
--- evalStmt (Incr_T pos ident) = do
---   stVar <- get
---   (envVar, envProc) <- ask
---   case M.lookup ident envVar of 
---     Nothing -> makeError ("Variable " ++ getIdentString ident ++ " not in scope") pos
---     Just loc -> do
---       case M.lookup loc stVar of
---         Nothing -> makeError ("Variable " ++ getIdentString ident ++ " not in scope") pos
---         Just (type_, val) -> do
---           case val of
---             ELitInt_T pos val -> do
---               put (M.insert loc (type_, ELitInt_T pos (val + 1)) stVar)
---             _ -> makeError ("Variable " ++ getIdentString ident ++ " is not an integer") pos
