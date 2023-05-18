@@ -2,7 +2,7 @@ Glob int x = 10;
 
 Proc f(int x) {
     x++;
-    print_line((string) x)
+    print_line((string) x);
 }
 
 Proc h() {

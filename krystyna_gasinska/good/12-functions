@@ -2,6 +2,10 @@ int f() {
     return (1);
 }
 
-int main() {
-    f();
+Proc g(int x) {
+    print_line ((string) x);
+}
+
+Proc main() {
+    g(f() + 2);
 }

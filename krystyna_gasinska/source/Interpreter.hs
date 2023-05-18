@@ -137,7 +137,6 @@ evalApp pos ident args = do
         newEnv <- bindArgsToEnv pos argsByVal argVals argsByRef argLocs envVar'
         will_return <- if stringFunctionType ret == "void" then return False else return True
         returned <- local (const (newEnv, envProc)) (evalBlock will_return block)
-        liftIO $ print ("function " ++ getIdentString ident ++ " returned " ++ show returned)
         case returned of 
           Ret val -> do
             if stringTypeOfElit val == stringFunctionType ret then return (Ret val) else makeError "Wrong return type" pos
@@ -310,6 +309,7 @@ evalStmt will_return (Return_T pos expr) = do
 
 evalStmt _ (SExp_T _ expr) = do 
   evalExpr expr
+  return NoRet
 
 modifyVariable :: BNFC'Position -> Ident -> (Integer -> Integer) -> RSE ()
 modifyVariable pos ident modifyFn = do

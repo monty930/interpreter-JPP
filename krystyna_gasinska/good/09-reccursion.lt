@@ -2,7 +2,7 @@ Proc rec(int z) {
     print_line("Inside with value " + (string) z);
     z++;
     if (z < 4) {
-        rec(z)
+        rec(z);
     }
 }
 
@@ -10,7 +10,7 @@ Proc R2(int y) {
     print_line("Inside with value " + (string) y);
     y++;
     if (y < 4) {
-        rec(y)
+        rec(y);
     }
 }
 
@@ -18,7 +18,7 @@ Proc main() {
     int y = 0;
     rec(& y);
     print_line("");
-    R2(y)
+    R2(y);
 }
 
 /*

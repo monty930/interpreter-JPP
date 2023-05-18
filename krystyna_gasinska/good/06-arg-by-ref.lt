@@ -1,6 +1,6 @@
 Proc P(int x, char y, bool z, int t) {
     x = x + 20;
-    print_line((string) t)
+    print_line((string) t);
 }
 
 Proc main() {
@@ -9,8 +9,3 @@ Proc main() {
     print_line((string) arg);
     print_line((string) ("ala" != "Ala"));
 }
-
-// Expected:
-// 4
-// 62
-// True

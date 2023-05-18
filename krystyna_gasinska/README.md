@@ -11,7 +11,6 @@ int na bool, wszystkie typy na string; np rzutowanie string na int nie ma sensu)
 Procedury przyjmują argumenty ale nie zwracają wartości.
 Język jest dynamicznie typowany. Ma statyczne wiązanie identyfikatorów.
 Język zezwala na redeklarację zmiennych.
-Ostatnia instrukcja w bloku nie musi kończyć się średnikiem.
 Zaimplementowana jest obsługa błędów wykonania. Komunikaty o błędach
 wypisywane są na standardowe wyjście błędów.
 
