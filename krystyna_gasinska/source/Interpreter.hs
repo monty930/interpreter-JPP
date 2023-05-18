@@ -35,6 +35,9 @@ type Env = (EnvVar, EnvProc)
 
 type RSE a = ReaderT Env (StateT StoreVar (ExceptT String IO)) a
 
+data BlockReturn = Ret ELit | NoRet
+  deriving (Show)
+
 getNewLoc :: StoreVar -> Loc
 getNewLoc stVar =
   case M.keys stVar of
@@ -52,7 +55,8 @@ makeError message bnfcPos = do
 interpretProgram :: Program -> RSE ()
 interpretProgram (Program_T _ topdefs) = do
   env <- evalTopDefs topdefs
-  local (const env) (evalApp BNFC'NoPosition (Ident "main") [])
+  _ <- local (const env) (evalApp BNFC'NoPosition (Ident "main") [])
+  return ()
 
 evalTopDefs :: [TopDef] -> RSE Env
 evalTopDefs [] = ask
@@ -116,7 +120,7 @@ bindArgsToEnv pos args vals (ref : refs) (loc : locs) envVar = do
 bindArgsToEnv pos _ _ _ _ _ = do
   error "Wrong number of arguments" pos
 
-evalApp :: BNFC'Position -> Ident -> [FunArg] -> RSE ()
+evalApp :: BNFC'Position -> Ident -> [FunArg] -> RSE BlockReturn
 evalApp pos ident args = do
     if getIdentString ident == "print" then printImpl pos args else do
       if getIdentString ident == "print_line" then printLnImpl pos args else do
@@ -131,7 +135,14 @@ evalApp pos ident args = do
         (argLocs, argsByRef) <- evalFunArgsAsRefs pos args args'
         newEnv <- bindArgsToEnv pos argsByVal argVals argsByRef argLocs envVar'
         will_return <- if stringFunctionType ret == "void" then return False else return True
-        local (const (newEnv, envProc)) (evalBlock will_return block)
+        returned <- local (const (newEnv, envProc)) (evalBlock will_return block)
+        liftIO $ print ("function " ++ getIdentString ident ++ " returned " ++ show returned)
+        case returned of 
+          Ret val -> do
+            if stringTypeOfElit val == stringFunctionType ret then return (Ret val) else makeError "Wrong return type" pos
+          NoRet -> do
+            if stringFunctionType ret == "void" then return NoRet else makeError "Missing return statement" pos
+
 
 evalFunArgsAsValues :: BNFC'Position -> [FunArg] -> [Arg] -> RSE ([ELit], [Arg])
 evalFunArgsAsValues pos args idfs = do
@@ -169,34 +180,38 @@ evalFunArgsAsRefsAcc pos (arg : args) (idf : idfs) (argLocs, argsByRef) = do
 evalFunArgsAsRefsAcc pos _ _ _ = do
   error "Wrong number of arguments" pos
 
-printImpl :: BNFC'Position -> [FunArg] -> RSE ()
+printImpl :: BNFC'Position -> [FunArg] -> RSE BlockReturn
 printImpl pos args = do
   case args of
     [arg] -> do
       (AsValue_T pos expr) <- return arg
       val <- evalExpr expr
       case val of
-        EString_T pos str -> liftIO $ putStr str
+        EString_T pos str -> do
+          liftIO $ putStr str
+          return NoRet
         _ -> makeError "Wrong argument type" pos
     _ -> makeError "Wrong number of arguments" pos
 
-printLnImpl :: BNFC'Position -> [FunArg] -> RSE ()
+printLnImpl :: BNFC'Position -> [FunArg] -> RSE BlockReturn
 printLnImpl pos args = do
   case args of
     [arg] -> do
       (AsValue_T pos expr) <- return arg
       val <- evalExpr expr
       case val of
-        EString_T pos str -> liftIO $ putStr (str ++ "\n")
+        EString_T pos str -> do
+          liftIO $ putStr (str ++ "\n")
+          return NoRet
         _ -> makeError "Wrong argument type" pos
     _ -> makeError "Wrong number of arguments" pos
 
-evalBlock :: Bool -> Block -> RSE ()
+evalBlock :: Bool -> Block -> RSE BlockReturn
 evalBlock will_return (Block_T pos stmts) = do
   evalStmts will_return pos stmts
 
-evalStmts :: Bool -> BNFC'Position -> [Stmt] -> RSE ()
-evalStmts False _ [] = return ()
+evalStmts :: Bool -> BNFC'Position -> [Stmt] -> RSE BlockReturn
+evalStmts False _ [] = return NoRet
 evalStmts True pos [] = makeError "Missing return statement" pos
 evalStmts will_return pos (stmt : stmts) = do
   case stmt of
@@ -216,11 +231,14 @@ evalStmts will_return pos (stmt : stmts) = do
       else do
         makeError "Type mismatch" pos_decl
     _notDecl -> do
-      evalStmt will_return stmt
-      evalStmts will_return pos stmts
+      ret <- evalStmt will_return stmt
+      case ret of
+        Ret val -> return (Ret val)
+        NoRet -> evalStmts will_return pos stmts
+  
 
-evalStmt :: Bool -> Stmt -> RSE ()
-evalStmt _ (Empty_T _) = return ()
+evalStmt :: Bool -> Stmt -> RSE BlockReturn
+evalStmt _ (Empty_T _) = return NoRet
 
 evalStmt will_return (BStmt_T _ block) = do
   evalBlock will_return block
@@ -230,15 +248,19 @@ evalStmt _ Decl_T {} = undefined
 evalStmt _ (App_T pos ident args) = do
   evalApp pos ident args
 
-evalStmt _ (Decr_T pos ident) = modifyVariable pos ident (\x -> x - 1)
+evalStmt _ (Decr_T pos ident) = do
+  modifyVariable pos ident (\x -> x - 1)
+  return NoRet
 
-evalStmt _ (Incr_T pos ident) = modifyVariable pos ident (+ 1)
+evalStmt _ (Incr_T pos ident) = do
+  modifyVariable pos ident (+ 1)
+  return NoRet
 
 evalStmt will_return (Cond_T pos expr block) = do
   val <- evalExpr expr
   case val of
     ELitBool_T _ (ELitTrue_T _) -> evalBlock will_return block
-    ELitBool_T _ (ELitFalse_T _) -> return ()
+    ELitBool_T _ (ELitFalse_T _) -> return NoRet
     _CondType -> makeError "Wrong condition type" pos
 
 evalStmt will_return (CondElse_T pos expr block1 block2) = do
@@ -254,7 +276,7 @@ evalStmt will_return (While_T pos expr block) = do
     ELitBool_T _ (ELitTrue_T _) -> do
       evalBlock will_return block
       evalStmt will_return (While_T pos expr block)
-    ELitBool_T _ (ELitFalse_T _) -> return ()
+    ELitBool_T _ (ELitFalse_T _) -> return NoRet
     _CondType -> makeError "Wrong condition type" pos
 
 evalStmt _ (Ass_T pos ident expr) = do
@@ -270,11 +292,14 @@ evalStmt _ (Ass_T pos ident expr) = do
             then put (M.insert loc (typ, val) stVar)
             else makeError "Type mismatch" pos
         Nothing -> makeError "Variable not in scope" pos
-  return ()
+  return NoRet
 
 evalStmt will_return (Return_T pos expr) = do
   if will_return then do 
     val <- evalExpr expr 
+    return (Ret val)
+  else do
+    makeError "Unexpected return" pos
     
 
 evalStmt _ (SExp_T _ expr) = undefined

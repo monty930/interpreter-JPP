@@ -18,7 +18,6 @@ Decr_T.    Stmt ::= Ident "--"  ";" ;
 Cond_T.    Stmt ::= "if" "(" Expr ")" Block  ;
 CondElse_T. Stmt ::= "if" "(" Expr ")" Block "else" Block  ;
 While_T.   Stmt ::= "while" "(" Expr ")" Block ;
-App_T.     Stmt ::= Ident "(" [FunArg] ")" ;
 Return_T.  Stmt ::= "return" "(" Expr ")" ;
 SExp_T.    Stmt ::= Expr  ";" ;
 -- Types ---------------------------------------------------
@@ -36,6 +35,7 @@ ELitTrue_T.  EBool ::= "true" ;
 ELitFalse_T. EBool ::= "false" ;
 ELitBool_T.  ELit ::= EBool ;
 ELit_T.    Expr7 ::= ELit ;
+App_T.     Expr7 ::= Ident "(" [FunArg] ")" ;
 AsValue_T. FunArg ::= Expr ;
 AsRef_T.   FunArg ::= "&" Var ;
 separator  FunArg "," ;
