@@ -1,9 +1,9 @@
 Proc main() {
     char x = (char) 67; # C
-    print_line((string) x)
+    print_line((string) x);
 
     x = (char) 1114112;
-    print_line((string) x)
+    print_line((string) x);
 }
 
 // Expected:

@@ -1,0 +1,20 @@
+int f() {
+    return (1);
+}
+
+Proc g(int x) {
+    print_line ((string) x);
+}
+
+bool ff(int x) {
+    if (x != 0) {
+        return(true);
+    } else {
+        return (false);
+    }
+}
+
+Proc main() {
+    g(f() + 2);
+    print_line((string) ff(2));
+}

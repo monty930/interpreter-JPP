@@ -5,8 +5,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-{-# HLINT ignore "Use camelCase" #-}
 
 -- | The abstract syntax of language grammar.
 
@@ -26,7 +24,7 @@ data Program' a = Program_T a [TopDef' a]
 
 type TopDef = TopDef' BNFC'Position
 data TopDef' a
-    = ProcDef_T a Ident [Arg' a] (Block' a)
+    = ProcDef_T a (RetVal' a) Ident [Arg' a] (Block' a)
     | GlobVar_T a (Type' a) Ident (Expr' a)
   deriving (C.Eq, C.Ord, C.Show, C.Read, C.Functor, C.Foldable, C.Traversable)
 
@@ -49,12 +47,16 @@ data Stmt' a
     | Cond_T a (Expr' a) (Block' a)
     | CondElse_T a (Expr' a) (Block' a) (Block' a)
     | While_T a (Expr' a) (Block' a)
-    | App_T a Ident [FunArg' a]
+    | Return_T a (Expr' a)
     | SExp_T a (Expr' a)
   deriving (C.Eq, C.Ord, C.Show, C.Read, C.Functor, C.Foldable, C.Traversable)
 
 type Type = Type' BNFC'Position
 data Type' a = Int_T a | CharT_T a | Str_T a | Bool_T a
+  deriving (C.Eq, C.Ord, C.Show, C.Read, C.Functor, C.Foldable, C.Traversable)
+
+type RetVal = RetVal' BNFC'Position
+data RetVal' a = FunRetVal_T a (Type' a) | FunRetVoid_T a
   deriving (C.Eq, C.Ord, C.Show, C.Read, C.Functor, C.Foldable, C.Traversable)
 
 type Var = Var' BNFC'Position
@@ -65,6 +67,7 @@ type Expr = Expr' BNFC'Position
 data Expr' a
     = EVar_T a (Var' a)
     | ELit_T a (ELit' a)
+    | App_T a Ident [FunArg' a]
     | Neg_T a (Expr' a)
     | Not_T a (Expr' a)
     | EMul_T a (Expr' a) (MulOp' a) (Expr' a)
@@ -128,7 +131,7 @@ instance HasPosition Program where
 
 instance HasPosition TopDef where
   hasPosition = \case
-    ProcDef_T p _ _ _ -> p
+    ProcDef_T p _ _ _ _ -> p
     GlobVar_T p _ _ _ -> p
 
 instance HasPosition Arg where
@@ -150,7 +153,7 @@ instance HasPosition Stmt where
     Cond_T p _ _ -> p
     CondElse_T p _ _ _ -> p
     While_T p _ _ -> p
-    App_T p _ _ -> p
+    Return_T p _ -> p
     SExp_T p _ -> p
 
 instance HasPosition Type where
@@ -160,6 +163,11 @@ instance HasPosition Type where
     Str_T p -> p
     Bool_T p -> p
 
+instance HasPosition RetVal where
+  hasPosition = \case
+    FunRetVal_T p _ -> p
+    FunRetVoid_T p -> p
+
 instance HasPosition Var where
   hasPosition = \case
     Var_T p _ -> p
@@ -168,6 +176,7 @@ instance HasPosition Expr where
   hasPosition = \case
     EVar_T p _ -> p
     ELit_T p _ -> p
+    App_T p _ _ -> p
     Neg_T p _ -> p
     Not_T p _ -> p
     EMul_T p _ _ _ -> p

@@ -1,0 +1,7 @@
+int p() {
+    return ('c');
+}
+
+Proc main() {
+    p();
+}

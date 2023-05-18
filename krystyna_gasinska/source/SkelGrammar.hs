@@ -25,7 +25,7 @@ transProgram x = case x of
 
 transTopDef :: Show a => AbsGrammar.TopDef' a -> Result
 transTopDef x = case x of
-  AbsGrammar.ProcDef_T _ ident args block -> failure x
+  AbsGrammar.ProcDef_T _ retval ident args block -> failure x
   AbsGrammar.GlobVar_T _ type_ ident expr -> failure x
 
 transArg :: Show a => AbsGrammar.Arg' a -> Result
@@ -47,7 +47,7 @@ transStmt x = case x of
   AbsGrammar.Cond_T _ expr block -> failure x
   AbsGrammar.CondElse_T _ expr block1 block2 -> failure x
   AbsGrammar.While_T _ expr block -> failure x
-  AbsGrammar.App_T _ ident funargs -> failure x
+  AbsGrammar.Return_T _ expr -> failure x
   AbsGrammar.SExp_T _ expr -> failure x
 
 transType :: Show a => AbsGrammar.Type' a -> Result
@@ -57,6 +57,11 @@ transType x = case x of
   AbsGrammar.Str_T _ -> failure x
   AbsGrammar.Bool_T _ -> failure x
 
+transRetVal :: Show a => AbsGrammar.RetVal' a -> Result
+transRetVal x = case x of
+  AbsGrammar.FunRetVal_T _ type_ -> failure x
+  AbsGrammar.FunRetVoid_T _ -> failure x
+
 transVar :: Show a => AbsGrammar.Var' a -> Result
 transVar x = case x of
   AbsGrammar.Var_T _ ident -> failure x
@@ -65,6 +70,7 @@ transExpr :: Show a => AbsGrammar.Expr' a -> Result
 transExpr x = case x of
   AbsGrammar.EVar_T _ var -> failure x
   AbsGrammar.ELit_T _ elit -> failure x
+  AbsGrammar.App_T _ ident funargs -> failure x
   AbsGrammar.Neg_T _ expr -> failure x
   AbsGrammar.Not_T _ expr -> failure x
   AbsGrammar.EMul_T _ expr1 mulop expr2 -> failure x
