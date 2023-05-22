@@ -1,0 +1,28 @@
+Gen int g() {
+    int i = 0;
+    while (i < 3) {
+        i = i + 1;
+        yield(i);
+    }
+    {
+        {
+            {
+                yield(100);
+            }
+        }
+    }
+}
+
+Proc main() {
+    gen zm = g();
+    int a = next(zm);
+    print_line((string) a);
+    print_line("kolejne wykonanie:");
+    print_line((string) next(zm));
+    print_line("kolejne wykonanie:");
+    print_line((string) next(zm));
+    print_line("kolejne wykonanie:");
+    print_line((string) next(zm));
+    print_line("kolejne wykonanie:");
+    print_line((string) next(zm));
+}
