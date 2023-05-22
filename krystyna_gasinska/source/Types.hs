@@ -19,9 +19,11 @@ type StoreVar = M.Map Loc (Type, ELit)
 
 type EnvProc = M.Map Ident (RetVal, [Arg], Block, EnvVar)
 
-type Env = (EnvVar, EnvProc)
+type EnvGen = M.Map Ident (RetVal, [Arg], Block, EnvVar)
+
+type Env = (EnvVar, EnvProc, EnvGen)
 
 type RSE a = ReaderT Env (StateT StoreVar (ExceptT String IO)) a
 
-data BlockReturn = Ret ELit | NoRet
+data BlockReturn = Ret ELit | NoRet | Yield ELit
   deriving (Show)

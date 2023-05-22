@@ -42,17 +42,17 @@ evalTopDefs [] = ask
 evalTopDefs (topdef : topdefs) = do
   case topdef of
     ProcDef_T pos ret ident args block -> do
-      (envVar, envProc) <- ask
+      (envVar, envProc, envGen) <- ask
       -- check if procedure is already defined
       case M.lookup ident envProc of
         Just _ -> makeError ("Procedure " ++ getIdentString ident ++ " already defined") pos
         Nothing -> do
           -- add procedure to environment
           let envProc' = M.insert ident (ret, args, block, envVar) envProc
-          let newEnv = (envVar, envProc')
+          let newEnv = (envVar, envProc', envGen)
           local (const newEnv) (evalTopDefs topdefs)
     GlobVar_T pos type_ ident expr -> do
-      (envVar, envProc) <- ask
+      (envVar, envProc, envGen) <- ask
       stVar <- get
       retFromExpr <- evalExpr expr
       val <- getValFromExpr retFromExpr
@@ -63,7 +63,7 @@ evalTopDefs (topdef : topdefs) = do
           let newLoc = getNewLoc stVar
           put (M.insert newLoc (type_, val) stVar)
           let envVar' = M.insert ident newLoc envVar
-          let newEnv = (envVar', envProc)
+          let newEnv = (envVar', envProc, envGen)
           local (const newEnv) (evalTopDefs topdefs)
         else do
           makeError "Type mismatch" pos
@@ -77,20 +77,20 @@ bindArgsToEnv pos (arg : args) (val : vals) refs locs envVar = do
     let newLoc = getNewLoc stVar
     put (M.insert newLoc (typeOfArg arg, val) stVar)
     let envVar' = M.insert (getArgIdent arg) newLoc envVar
-    (_, envProc) <- ask
-    let newEnv = (envVar', envProc)
+    (_, envProc, envGen) <- ask
+    let newEnv = (envVar', envProc, envGen)
     local (const newEnv) (bindArgsToEnv pos args vals refs locs envVar')
   else do
     makeError "Wrong argument type" pos
 
 bindArgsToEnv pos args vals (ref : refs) (loc : locs) envVar = do
   stVar <- get
-  (_, envProc) <- ask
+  (_, envProc, envGen) <- ask
   case M.lookup loc stVar of
     Just (type_, _) -> do
       if stringTypeOfArg ref == stringTypeOfType type_ then do
         let envVar' = M.insert (getArgIdent ref) loc envVar
-        let newEnv = (envVar', envProc)
+        let newEnv = (envVar', envProc, envGen)
         local (const newEnv) (bindArgsToEnv pos args vals refs locs envVar')
       else do
         makeError "Wrong argument type" pos
@@ -104,7 +104,7 @@ evalApp :: BNFC'Position -> Ident -> [FunArg] -> RSE BlockReturn
 evalApp pos ident args = do
     if getIdentString ident == "print" then printImpl pos args else do
       if getIdentString ident == "print_line" then printLnImpl pos args else do
-        (envVar, envProc) <- ask
+        (envVar, envProc, envGen) <- ask
         (ret, args', block, envVar') <- case M.lookup ident envProc of
           Just (ret, args', block, envVar') -> return (ret, args', block, envVar')
           Nothing ->
@@ -115,7 +115,7 @@ evalApp pos ident args = do
         (argLocs, argsByRef) <- evalFunArgsAsRefs pos args args'
         newEnv <- bindArgsToEnv pos argsByVal argVals argsByRef argLocs envVar'
         will_return <- if stringFunctionType ret == "void" then return False else return True
-        returned <- local (const (newEnv, envProc)) (evalBlock will_return block)
+        returned <- local (const (newEnv, envProc, envGen)) (evalBlock will_return block)
         case returned of
           Ret val -> do
             if stringTypeOfElit val == stringFunctionType ret then return (Ret val) else makeError "Wrong return type" pos
@@ -202,14 +202,14 @@ evalStmts will_return pos (stmt : stmts) = do
       evaluatedExpr <- getValFromExpr retFromExpr
       if stringTypeOfType typ == stringTypeOfElit evaluatedExpr
         then do
-          (envVar, envProc) <- ask
+          (envVar, envProc, envGen) <- ask
           stVar <- get
 
           -- add variable to environment
           let newLoc = getNewLoc stVar
           put (M.insert newLoc (typ, evaluatedExpr) stVar)
           let envVar' = M.insert ident newLoc envVar
-          let newEnv = (envVar', envProc)
+          let newEnv = (envVar', envProc, envGen)
           local (const newEnv) (evalStmts will_return pos stmts)
       else do
         makeError "Type mismatch" pos_decl
@@ -263,7 +263,7 @@ evalStmt will_return (While_T pos expr block) = do
     _CondType -> makeError "Wrong condition type" pos
 
 evalStmt _ (Ass_T pos ident expr) = do
-  (envVar, envProc) <- ask
+  (envVar, _envProc, _envGen) <- ask
   stVar <- get
   retFromExpr <- evalExpr expr
   val <- getValFromExpr retFromExpr
@@ -293,7 +293,7 @@ evalStmt _ (SExp_T _ expr) = do
 modifyVariable :: BNFC'Position -> Ident -> (Integer -> Integer) -> RSE ()
 modifyVariable pos ident modifyFn = do
   stVar <- get
-  (envVar, envProc) <- ask
+  (envVar, _envProc, _envGen) <- ask
   case M.lookup ident envVar of
     Nothing -> makeError ("Variable " ++ getIdentString ident ++ " not in scope") pos
     Just loc -> do
@@ -307,7 +307,7 @@ modifyVariable pos ident modifyFn = do
 
 evalVar :: Var -> RSE Loc
 evalVar (Var_T pos ident) = do
-  (envVar, envProc) <- ask
+  (envVar, _envProc, envGen) <- ask
   case M.lookup ident envVar of
     Nothing -> makeError ("Variable " ++ getIdentString ident ++ " not in scope") pos
     Just loc -> return loc
@@ -479,8 +479,11 @@ initialEnvProc =
   (M.insert (Ident "print_line") (FunRetVoid_T BNFC'NoPosition, printProcArg, printBlock, initialEnvVar)
   M.empty)
 
+initialEnvGen :: EnvGen
+initialEnvGen = M.empty
+
 initialEnv :: Env
-initialEnv = (initialEnvVar, initialEnvProc)
+initialEnv = (initialEnvVar, initialEnvProc, initialEnvGen)
 
 initialStore :: StoreVar
 initialStore = M.empty
