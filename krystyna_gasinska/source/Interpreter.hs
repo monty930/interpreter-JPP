@@ -16,6 +16,8 @@ import PrintGrammar ( Print, printTree )
 import SkelGrammar  ()
 import Parse
 import Helper
+import TypeChecker 
+import Types
 
 import qualified Data.Map as M
 import Control.Monad.Reader
@@ -23,34 +25,11 @@ import Control.Monad.State
 import Control.Monad.Except
 import Control.Monad.Identity
 
-type Loc = Int
-
-type EnvVar = M.Map Ident Loc
-
-type StoreVar = M.Map Loc (Type, ELit)
-
-type EnvProc = M.Map Ident (RetVal, [Arg], Block, EnvVar)
-
-type Env = (EnvVar, EnvProc)
-
-type RSE a = ReaderT Env (StateT StoreVar (ExceptT String IO)) a
-
-data BlockReturn = Ret ELit | NoRet
-  deriving (Show)
-
 getNewLoc :: StoreVar -> Loc
 getNewLoc stVar =
   case M.keys stVar of
     [] -> 0
     keys -> maximum keys + 1
-
-showBNFC :: BNFC'Position -> String
-showBNFC (Just (line, col)) = "line " ++ show line ++ ", column " ++ show col
-showBNFC Nothing = ""
-
-makeError message bnfcPos = do
-  let errorMessage = showBNFC bnfcPos ++ " " ++ message
-  errorWithoutStackTrace errorMessage
 
 interpretProgram :: Program -> RSE ()
 interpretProgram (Program_T _ topdefs) = do

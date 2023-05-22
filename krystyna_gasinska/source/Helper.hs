@@ -34,3 +34,11 @@ stringFunctionType (FunRetVoid_T _) = "void"
 
 typeOfArg :: Arg -> Type
 typeOfArg (Arg_T _ type_ _) = type_
+
+showBNFC :: BNFC'Position -> String
+showBNFC (Just (line, col)) = "line " ++ show line ++ ", column " ++ show col
+showBNFC Nothing = ""
+
+makeError message bnfcPos = do
+  let errorMessage = showBNFC bnfcPos ++ " " ++ message
+  errorWithoutStackTrace errorMessage
