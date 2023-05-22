@@ -27,6 +27,7 @@ transTopDef :: Show a => AbsGrammar.TopDef' a -> Result
 transTopDef x = case x of
   AbsGrammar.ProcDef_T _ retval ident args block -> failure x
   AbsGrammar.GlobVar_T _ type_ ident expr -> failure x
+  AbsGrammar.Gener_T _ type_ ident args block -> failure x
 
 transArg :: Show a => AbsGrammar.Arg' a -> Result
 transArg x = case x of
@@ -48,6 +49,9 @@ transStmt x = case x of
   AbsGrammar.CondElse_T _ expr block1 block2 -> failure x
   AbsGrammar.While_T _ expr block -> failure x
   AbsGrammar.Return_T _ expr -> failure x
+  AbsGrammar.Yield_T _ expr -> failure x
+  AbsGrammar.DeclGen_T _ ident1 ident2 funargs -> failure x
+  AbsGrammar.ForGen_T _ ident1 ident2 funargs block -> failure x
   AbsGrammar.SExp_T _ expr -> failure x
 
 transType :: Show a => AbsGrammar.Type' a -> Result
@@ -79,6 +83,7 @@ transExpr x = case x of
   AbsGrammar.EAnd_T _ expr1 expr2 -> failure x
   AbsGrammar.EOr_T _ expr1 expr2 -> failure x
   AbsGrammar.ECast_T _ type_ expr -> failure x
+  AbsGrammar.EGenNext_T _ ident -> failure x
 
 transELit :: Show a => AbsGrammar.ELit' a -> Result
 transELit x = case x of

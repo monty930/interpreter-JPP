@@ -3,6 +3,7 @@ entrypoints Program ;
 Program_T. Program ::= [TopDef] ;
 ProcDef_T. TopDef ::= RetVal Ident "(" [Arg] ")" Block ;
 GlobVar_T. TopDef ::= "Glob" Type Ident "=" Expr ";" ;
+Gener_T.   TopDef ::= "Gen" Type Ident "(" [Arg] ")" Block ;
 separator  TopDef "" ;
 Arg_T. 	   Arg ::= Type Ident;
 separator  Arg "," ;
@@ -19,6 +20,9 @@ Cond_T.    Stmt ::= "if" "(" Expr ")" Block  ;
 CondElse_T. Stmt ::= "if" "(" Expr ")" Block "else" Block  ;
 While_T.   Stmt ::= "while" "(" Expr ")" Block ;
 Return_T.  Stmt ::= "return" "(" Expr ")" ;
+Yield_T.   Stmt ::= "yield" "(" Expr ")" ;
+DeclGen_T. Stmt ::= "gen" Ident "=" Ident "(" [FunArg] ")" ;
+ForGen_T.  Stmt ::= "for" "(" Ident "in" Ident "(" [FunArg] ")" ")" Block ;
 SExp_T.    Stmt ::= Expr  ";" ;
 -- Types ---------------------------------------------------
 Int_T.     Type ::= "int" ;
@@ -49,6 +53,7 @@ ERel_T.    Expr3 ::= Expr3 RelOp Expr4 ;
 EAnd_T.    Expr2 ::= Expr3 "&&" Expr2 ;
 EOr_T.     Expr1 ::= Expr2 "||" Expr1 ;
 ECast_T.   Expr6 ::= "(" Type ")" Expr6 ;
+EGenNext_T. Expr6 ::= "next" "(" Ident ")" ;
 coercions  Expr 7 ;
 separator  Expr "," ;
 -- operators -----------------------------------------------

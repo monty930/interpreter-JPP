@@ -122,7 +122,6 @@ Stmt
   | 'if' '(' Expr ')' Block { (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1), AbsGrammar.Cond_T (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1)) (snd $3) (snd $5)) }
   | 'if' '(' Expr ')' Block 'else' Block { (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1), AbsGrammar.CondElse_T (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1)) (snd $3) (snd $5) (snd $7)) }
   | 'while' '(' Expr ')' Block { (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1), AbsGrammar.While_T (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1)) (snd $3) (snd $5)) }
-  | Ident '(' ListFunArg ')' { (fst $1, AbsGrammar.App_T (fst $1) (snd $1) (snd $3)) }
   | 'return' '(' Expr ')' { (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1), AbsGrammar.Return_T (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1)) (snd $3)) }
   | Expr ';' { (fst $1, AbsGrammar.SExp_T (fst $1) (snd $1)) }
 
@@ -145,6 +144,7 @@ Expr7 :: { (AbsGrammar.BNFC'Position, AbsGrammar.Expr) }
 Expr7
   : Var { (fst $1, AbsGrammar.EVar_T (fst $1) (snd $1)) }
   | ELit { (fst $1, AbsGrammar.ELit_T (fst $1) (snd $1)) }
+  | Ident '(' ListFunArg ')' { (fst $1, AbsGrammar.App_T (fst $1) (snd $1) (snd $3)) }
   | '(' Expr ')' { (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1), (snd $2)) }
 
 ELit :: { (AbsGrammar.BNFC'Position, AbsGrammar.ELit) }

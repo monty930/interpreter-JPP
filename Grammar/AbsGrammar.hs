@@ -26,6 +26,7 @@ type TopDef = TopDef' BNFC'Position
 data TopDef' a
     = ProcDef_T a (RetVal' a) Ident [Arg' a] (Block' a)
     | GlobVar_T a (Type' a) Ident (Expr' a)
+    | Gener_T a (Type' a) Ident [Arg' a] (Block' a)
   deriving (C.Eq, C.Ord, C.Show, C.Read, C.Functor, C.Foldable, C.Traversable)
 
 type Arg = Arg' BNFC'Position
@@ -48,6 +49,9 @@ data Stmt' a
     | CondElse_T a (Expr' a) (Block' a) (Block' a)
     | While_T a (Expr' a) (Block' a)
     | Return_T a (Expr' a)
+    | Yield_T a (Expr' a)
+    | DeclGen_T a Ident Ident [FunArg' a]
+    | ForGen_T a Ident Ident [FunArg' a] (Block' a)
     | SExp_T a (Expr' a)
   deriving (C.Eq, C.Ord, C.Show, C.Read, C.Functor, C.Foldable, C.Traversable)
 
@@ -76,6 +80,7 @@ data Expr' a
     | EAnd_T a (Expr' a) (Expr' a)
     | EOr_T a (Expr' a) (Expr' a)
     | ECast_T a (Type' a) (Expr' a)
+    | EGenNext_T a Ident
   deriving (C.Eq, C.Ord, C.Show, C.Read, C.Functor, C.Foldable, C.Traversable)
 
 type ELit = ELit' BNFC'Position
@@ -133,6 +138,7 @@ instance HasPosition TopDef where
   hasPosition = \case
     ProcDef_T p _ _ _ _ -> p
     GlobVar_T p _ _ _ -> p
+    Gener_T p _ _ _ _ -> p
 
 instance HasPosition Arg where
   hasPosition = \case
@@ -154,6 +160,9 @@ instance HasPosition Stmt where
     CondElse_T p _ _ _ -> p
     While_T p _ _ -> p
     Return_T p _ -> p
+    Yield_T p _ -> p
+    DeclGen_T p _ _ _ -> p
+    ForGen_T p _ _ _ _ -> p
     SExp_T p _ -> p
 
 instance HasPosition Type where
@@ -185,6 +194,7 @@ instance HasPosition Expr where
     EAnd_T p _ _ -> p
     EOr_T p _ _ -> p
     ECast_T p _ _ -> p
+    EGenNext_T p _ -> p
 
 instance HasPosition ELit where
   hasPosition = \case

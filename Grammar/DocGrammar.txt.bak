@@ -76,7 +76,6 @@ All other symbols are terminals.
   |  |  **|**  | ``if`` ``(`` //Expr// ``)`` //Block//
   |  |  **|**  | ``if`` ``(`` //Expr// ``)`` //Block// ``else`` //Block//
   |  |  **|**  | ``while`` ``(`` //Expr// ``)`` //Block//
-  |  |  **|**  | //Ident// ``(`` //[FunArg]// ``)``
   |  |  **|**  | ``return`` ``(`` //Expr// ``)``
   |  |  **|**  | //Expr// ``;``
   | //Type// | -> | ``int``
@@ -88,6 +87,7 @@ All other symbols are terminals.
   | //Var// | -> | //Ident//
   | //Expr7// | -> | //Var//
   |  |  **|**  | //ELit//
+  |  |  **|**  | //Ident// ``(`` //[FunArg]// ``)``
   |  |  **|**  | ``(`` //Expr// ``)``
   | //ELit// | -> | //Integer//
   |  |  **|**  | //EBool//
