@@ -16,7 +16,7 @@ import PrintGrammar ( Print, printTree )
 import SkelGrammar  ()
 import Parse
 import Helper
-import TypeChecker 
+import TypeChecker
 import Types
 
 import qualified Data.Map as M
@@ -116,7 +116,7 @@ evalApp pos ident args = do
         newEnv <- bindArgsToEnv pos argsByVal argVals argsByRef argLocs envVar'
         will_return <- if stringFunctionType ret == "void" then return False else return True
         returned <- local (const (newEnv, envProc)) (evalBlock will_return block)
-        case returned of 
+        case returned of
           Ret val -> do
             if stringTypeOfElit val == stringFunctionType ret then return (Ret val) else makeError "Wrong return type" pos
           NoRet -> do
@@ -199,7 +199,7 @@ evalStmts will_return pos (stmt : stmts) = do
   case stmt of
     Decl_T pos_decl typ ident expr -> do
       retFromExpr <- evalExpr expr
-      evaluatedExpr <- getValFromExpr (retFromExpr)
+      evaluatedExpr <- getValFromExpr retFromExpr
       if stringTypeOfType typ == stringTypeOfElit evaluatedExpr
         then do
           (envVar, envProc) <- ask
@@ -218,7 +218,7 @@ evalStmts will_return pos (stmt : stmts) = do
       case ret of
         Ret val -> return (Ret val)
         NoRet -> evalStmts will_return pos stmts
-  
+
 
 evalStmt :: Bool -> Stmt -> RSE BlockReturn
 evalStmt _ (Empty_T _) = return NoRet
@@ -279,14 +279,14 @@ evalStmt _ (Ass_T pos ident expr) = do
   return NoRet
 
 evalStmt will_return (Return_T pos expr) = do
-  if will_return then do 
+  if will_return then do
     retFromExpr <- evalExpr expr
     val <- getValFromExpr retFromExpr
     return (Ret val)
   else do
     makeError "Unexpected return" pos
 
-evalStmt _ (SExp_T _ expr) = do 
+evalStmt _ (SExp_T _ expr) = do
   evalExpr expr
   return NoRet
 
