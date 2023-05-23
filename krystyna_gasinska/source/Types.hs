@@ -39,4 +39,7 @@ data BlockReturn = Ret ELit | NoRet | Yield ELit
 data BlockRetType = RetType Type | NoRetType | YieldType Type
   deriving (Show)
 
-type GenState = [Stmt]
+type GenState = [GenStateElem]
+
+data GenStateElem = GenStateStmt Stmt | ReturnToEnv EnvVarIter
+  deriving (Show)
