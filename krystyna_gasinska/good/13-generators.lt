@@ -9,30 +9,46 @@ Gen int g() {
             i++;
             {
                 yield(100);
-                yield(i);
+                yield(f());
             }
             i--;
         }
+        i = 52;
     }
     yield(i);
 }
 
+int f() {
+    int i = 0;
+    for (j in g()) {
+        i++;
+        print_line("F: " + (string) j + " " + (string) i);
+        if (j == 100) {
+            return (i);
+        }
+    }
+    return (42);
+}
+
+
 Proc main() {
-    /*
+    
     gen zm = g();
     int a = next(zm);
-    print_line((string) a);
-    print_line((string) next(zm));
+    print_line("var: " + (string) a);
+    print_line("var: " + (string) next(zm));
 
-*/
+
     int k = 42;
-    
+
+    print_line("for:");
     for (j in g()) {
         print_line((string) j);
     }
 
-//    print_line((string) next(zm));
-//    print_line((string) next(zm));
-
+    print_line("var: " + (string) next(zm));
+    print_line("var: " + (string) next(zm));
     
+    int x = f();
+    print_line((string) x);
 }

@@ -156,7 +156,21 @@ evalGenState ret_type ((Ass_T pos ident expr) : stmts) = do
             else makeError "Type mismatch" pos
         Nothing -> makeError "Variable not in scope" pos
 
-evalGenState ret_type ((ForGen_T pos ident1 ident2 funargs block) : stmts) = undefined 
+evalGenState ret_type ((ForGen_T pos ident1 ident2 funargs block) : stmts) = do undefined
+  -- ((envVar, envIter), envProc, envGen) <- ask
+  -- (stVar, stIter) <- get
+  -- case M.lookup identGen envGen of
+  --   Nothing -> do
+  --     makeError "Generator not implemented yet" pos
+  --   Just (type_, args', block, envVarIter) -> do
+  --     -- add variable to environment
+  --     let newLoc = getNewLoc stVar 
+  --     liftIO $ putStrLn ("NEWLOC for J: " ++ show newLoc)
+  --     let newStVar = M.insert newLoc (defaultValue type_) stVar
+  --     put (newStVar, stIter)
+  --     let envVarForBlock = M.insert identVar newLoc envVar
+  --     let envForBlock = (envVarForBlock, envIter)
+  --     evalForGenState ret_type 
 
 
 ---------------------------
@@ -367,11 +381,6 @@ evalBlock :: BlockRetType -> Block -> RSE BlockReturn
 evalBlock ret_type (Block_T pos stmts) = do
   ((envVar, envIter), envProc, envGen) <- ask
   (stVar, stIter) <- get
-  -- liftIO $ putStrLn ("BLOCK envVar " ++ show envVar)
-  -- liftIO $ putStrLn ("BLOCK envIter " ++ show envIter)
-  -- liftIO $ putStrLn ("BLOCK stVar " ++ show stVar)
-  -- liftIO $ putStrLn ("BLOCK stIter " ++ show stIter)
-
   evalStmts ret_type pos stmts
 
 evalStmts :: BlockRetType -> BNFC'Position -> [Stmt] -> RSE BlockReturn
@@ -413,7 +422,7 @@ evalStmts ret_type pos (stmt : stmts) = do
         Ret val -> return (Ret val)
         Yield val -> return (Yield val)
         NoRet -> evalStmts ret_type pos stmts
-evalStmts _ pos [] = makeError "Missing return statement" pos
+evalStmts _ pos [] = return NoRet
 
 evalStmt :: BlockRetType -> Stmt -> RSE BlockReturn
 evalStmt _ (Empty_T _) = return NoRet
@@ -500,20 +509,11 @@ evalStmt ret_type (ForGen_T pos identVar identGen args for_block) = do
     Just (type_, args', block, envVarIter) -> do
       -- add variable to environment
       let newLoc = getNewLoc stVar 
-      liftIO $ putStrLn ("NEWLOC for J: " ++ show newLoc)
       let newStVar = M.insert newLoc (defaultValue type_) stVar
       put (newStVar, stIter)
       let envVarForBlock = M.insert identVar newLoc envVar
       let envForBlock = (envVarForBlock, envIter)
       evalFor ret_type newLoc type_ [BStmt_T BNFC'NoPosition block] envVarIter envForBlock for_block
-
-defaultValue :: Type -> (Type, ELit)
-defaultValue type_ = 
-  case type_ of
-    Int_T _ -> (type_, ELitInt_T BNFC'NoPosition 0)
-    Bool_T _ -> (type_, ELitBool_T BNFC'NoPosition (ELitFalse_T BNFC'NoPosition))
-    Str_T _ -> (type_, EString_T BNFC'NoPosition "")
-    _ -> undefined -- intended
 
 blockRetToElit :: BlockReturn -> ELit 
 blockRetToElit (Yield val) = val
@@ -531,20 +531,30 @@ evalFor ret_type loc type_ gState env envForBlock block = do
     NoRet -> do
       return NoRet
     _ -> do
-      liftIO $ putStrLn ("evalFor ret " ++ show ret)
-      liftIO $ putStrLn ("evalFor env' " ++ show env')
-      liftIO $ putStrLn ("evalFor env " ++ show env)
-      local (const (envForBlock, envProc, envGen)) (evalBlock ret_type block)
-      evalFor ret_type loc type_ gSt env' envForBlock block
+      ret <- local (const (envForBlock, envProc, envGen)) (evalBlock ret_type block)
+      case ret of 
+        Ret val -> do
+          return (Ret val)
+        Yield val -> do
+          makeError "Yield statement outside generator" BNFC'NoPosition
+        NoRet -> do
+          evalFor ret_type loc type_ gSt env' envForBlock block
 
 evalGenNextFor :: Type -> GenState -> EnvVarIter -> RSE (BlockReturn, GenState, EnvVarIter)
 evalGenNextFor type_ gState envVarIter = do 
   ((envVar, envIter), envProc, envGen) <- ask
   (stVar, stIter) <- get
   let newEnv = (envVarIter, envProc, envGen)
-  liftIO $ putStrLn ("evalGenNextFor envVarIter " ++ show envVarIter)
   res@(ret, genState', envVarIter') <- local (const newEnv) (evalGenState (YieldType type_) gState)
   return res
+
+defaultValue :: Type -> (Type, ELit)
+defaultValue type_ = 
+  case type_ of
+    Int_T _ -> (type_, ELitInt_T BNFC'NoPosition 0)
+    Bool_T _ -> (type_, ELitBool_T BNFC'NoPosition (ELitFalse_T BNFC'NoPosition))
+    Str_T _ -> (type_, EString_T BNFC'NoPosition "")
+    _ -> undefined -- intended
 
 modifyVariable :: BNFC'Position -> Ident -> (Integer -> Integer) -> RSE ()
 modifyVariable pos ident modifyFn = do
@@ -691,7 +701,6 @@ evalExpr (ERel_T pos expr1 relOp expr2) = do
         _ -> makeError "Wrong operation argument" pos
     _ -> makeError "Wrong operation argument" pos
 
-
 evalExpr (ECast_T pos type_ expr) = do
   retFromExpr <- evalExpr expr
   val <- getValFromExpr retFromExpr
@@ -703,7 +712,8 @@ evalExpr (ECast_T pos type_ expr) = do
         else
           return (Ret (EChar_T pos (chr (fromInteger val'))))
     (ELitInt_T _ val', Str_T _) -> return (Ret (EString_T pos (show val')))
-    (ELitInt_T _ val', Bool_T _) -> return (Ret (ELitBool_T pos (if val' == 0 then ELitFalse_T pos else ELitTrue_T pos)))
+    (ELitInt_T _ val', Bool_T _) ->
+      return (Ret (ELitBool_T pos (if val' == 0 then ELitFalse_T pos else ELitTrue_T pos)))
     (EChar_T _ val', Int_T _) -> return (Ret (ELitInt_T pos (toInteger (ord val'))))
     (EChar_T _ val', CharT_T _) -> return (Ret val)
     (EChar_T _ val', Str_T _) -> return (Ret (EString_T pos [val']))
@@ -711,7 +721,10 @@ evalExpr (ECast_T pos type_ expr) = do
       case val' of
         ELitTrue_T _ -> return (Ret (ELitInt_T pos 1))
         ELitFalse_T _ -> return (Ret (ELitInt_T pos 0))
-    (ELitBool_T _ val', Str_T _) -> return (Ret (EString_T pos (if val' == ELitFalse_T pos then "False" else "True")))
+    (ELitBool_T _ val', Str_T _) -> do
+      case val' of
+        ELitTrue_T _ -> return (Ret (EString_T pos "True"))
+        ELitFalse_T _ -> return (Ret (EString_T pos "False"))
     (ELitBool_T _ val', Bool_T _) -> return (Ret val)
     (EString_T _ val', Str_T _) -> return (Ret val)
     _wrong_type -> makeError "Wrong cast argument" pos
