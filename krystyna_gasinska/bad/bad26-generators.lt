@@ -1,0 +1,13 @@
+Gen int g() {
+    yield(1);
+    yield(2);
+    yield(3);
+}
+
+Proc main() {
+    gen zm = g();
+    print_line((string) next(zm));
+    print_line((string) next(zm));
+    print_line((string) next(zm));
+    print_line((string) next(zm));
+}

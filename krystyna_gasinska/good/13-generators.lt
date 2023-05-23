@@ -6,23 +6,33 @@ Gen int g() {
     }
     {
         {
+            i++;
             {
                 yield(100);
+                yield(i);
             }
+            i--;
         }
     }
+    yield(i);
 }
 
 Proc main() {
+    /*
     gen zm = g();
     int a = next(zm);
     print_line((string) a);
-    print_line("kolejne wykonanie:");
     print_line((string) next(zm));
-    print_line("kolejne wykonanie:");
-    print_line((string) next(zm));
-    print_line("kolejne wykonanie:");
-    print_line((string) next(zm));
-    print_line("kolejne wykonanie:");
-    print_line((string) next(zm));
+
+*/
+    int k = 42;
+    
+    for (j in g()) {
+        print_line((string) j);
+    }
+
+//    print_line((string) next(zm));
+//    print_line((string) next(zm));
+
+    
 }
