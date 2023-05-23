@@ -41,9 +41,8 @@ Proc main() {
 
     int k = 42;
 
-    print_line("for:");
     for (j in g()) {
-        print_line((string) j);
+        print_line("for: " + (string) j);
     }
 
     print_line("var: " + (string) next(zm));

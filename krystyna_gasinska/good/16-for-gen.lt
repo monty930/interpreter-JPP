@@ -7,6 +7,7 @@ Gen int g1() {
 Gen int g2() {
     for (i in g1()) {
         print_line(i);
+        yield(42);
     }
     yield(0);
 }

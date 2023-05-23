@@ -1,0 +1,11 @@
+Gen int g1(int c, char d) {
+    d = 'd'
+    yield(1);
+    yield(2);
+    yield(3);
+}
+
+Proc main () {
+    char c = 'c';
+    int zm = g1();
+}
