@@ -1,5 +1,5 @@
-Gen int g1(int c, char d) {
-    d = 'd'
+Gen int g1(int x, char d) {
+    d = 'd';
     yield(1);
     yield(2);
     yield(3);
@@ -7,5 +7,7 @@ Gen int g1(int c, char d) {
 
 Proc main () {
     char c = 'c';
-    int zm = g1();
+    gen zm = g1(2 + 2, c);
+    next(zm);
+    print_line((string) c);
 }

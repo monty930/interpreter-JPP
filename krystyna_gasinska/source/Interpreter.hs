@@ -51,6 +51,7 @@ evalGenState ret_type (GenStateStmt (Decl_T pos typ ident expr) : stmts) = do
       makeError "Type mismatch" pos
 
 evalGenState ret_type (GenStateStmt (Yield_T pos expr) : stmts) = do
+  (stVar, stIter) <- get
   retFromExpr <- evalExpr expr
   val <- getValFromExpr retFromExpr
   (envVarIter, _envProc, _envGen) <- ask
@@ -111,14 +112,15 @@ evalGenState ret_type (GenStateStmt (DeclGen_T pos ident1 ident2 funargs) : stmt
       let wholeEnv = (envVarIter, envProc, envGen)
       (envVarIter', _, _) <- addArgsToEnvGen pos wholeEnv args funargs
       let newLoc = getNewLocForGen stIter
+      let envIter' = M.insert ident1 newLoc envIter
+      let newEnv = ((envVar, envIter'), envProc, envGen)
+      (stVar, stIter) <- get
       put (stVar,
         M.insert newLoc
           (type_,
           [GenStateStmt (BStmt_T BNFC'NoPosition block)],
           envVarIter')
           stIter)
-      let envIter' = M.insert ident1 newLoc envIter
-      let newEnv = ((envVar, envIter'), envProc, envGen)
       local (const newEnv) (evalGenState ret_type stmts)
     Nothing -> do
       makeError "Generator not implemented yet" pos
@@ -143,27 +145,43 @@ evalGenState ret_type (GenStateStmt (Ass_T pos ident expr) : stmts) = do
         Just (typ, _) ->
           if stringTypeOfType typ == stringTypeOfElit val
             then do
+              (stVar, stIter) <- get
               put (M.insert loc (typ, val) stVar, stIter)
               evalGenState ret_type stmts
             else makeError "Type mismatch" pos
         Nothing -> makeError "Variable not in scope" pos
 
-evalGenState ret_type (GenStateStmt (ForGen_T pos ident1 ident2 funargs block) : stmts) = do 
-  
+evalGenState ret_type (GenStateStmt (ForGen_T pos ident1 ident2 funargs for_body) : stmts) = do 
+  ((envVar, envIter), envProc, envGen) <- ask
+  (stVar, stIter) <- get
+  case M.lookup ident2 envGen of 
+    Nothing -> do
+      makeError "Generator not implemented yet" pos
+    Just (type_, args, block, envVarIter) -> do
+      let newLoc = getNewLoc stVar
+      (stVar, stIter) <- get
+      let newStVar = M.insert newLoc (defaultValue type_) stVar
+      put (newStVar, stIter)
+      -- TODO: add ident1 and args to envVarIter
+      -- let (envVar, envIter) = envVarIter -- TOD: CHYBA
+      (envVarIter', _, _) <- addArgsToEnvGen pos (envVarIter, envProc, envGen) args funargs
+      let envVar' = M.insert ident1 newLoc envVar
+      let newEnvVarIter = (envVar', envIter)
+      let wholeEnv = (newEnvVarIter, envProc, envGen)
+      let forInfo = (type_, newLoc, [GenStateStmt (BStmt_T BNFC'NoPosition block)], envVarIter', for_body)
+      local (const wholeEnv) (evalGenState ret_type (ForInfo forInfo : stmts))
 
--- for@[for_init B ] : stmts
-
--- F@(info o zmiennej forowej oraz B) : stmts 
-
--- B : F@(zmienione info oraz B) : stmts 
-
--- ... wykonuje blok 
-
--- F@(zmienione info oraz B) : stmts 
-
-
-
--- B (for [info o zmiennej i B]) B (for [info o zmiennej i B])
+evalGenState ret_type (ForInfo (type_, loc, gState, envVarIter, for_body) : stmts) = do
+  ((envVar, envIter), envProc, envGen) <- ask
+  (stVar, stIter) <- get
+  (ret, gSt, env') <- evalGenNextFor type_ gState envVarIter
+  (stVar', stIter) <- get
+  put (M.insert loc (type_, blockRetToElit ret) stVar', stIter)
+  case ret of
+    NoRet -> evalGenState ret_type stmts
+    _ -> do
+      let newForInfo = (type_, loc, gSt, env', for_body)
+      evalGenState ret_type (GenStateStmt (BStmt_T BNFC'NoPosition for_body) : ForInfo newForInfo : stmts)
 
 evalGenState ret_type (ReturnToEnv e : stmts) = do
   (_, envProc, envGen) <- ask
@@ -209,6 +227,7 @@ addArgsToEnvGen pos env (arg : args) (funarg : funargs) = do
               makeError "Variable not in scope" pos
         Nothing -> do
           makeError "Variable not in scope" pos
+
 addArgsToEnvGen pos _ _ _ = do
   makeError "Wrong number of arguments" pos
 
@@ -408,10 +427,10 @@ evalGenNext pos varIdent = do
   ((envVar, envIter), envProc, envGen) <- ask
   (stVar, stIter) <- get
   case M.lookup varIdent envIter of
-    Nothing -> makeError ("Generator variable" ++ getIdentString varIdent ++ " not in scope") pos
+    Nothing -> makeError ("Generator variable " ++ getIdentString varIdent ++ " not in scope") pos
     Just loc -> do
       case M.lookup loc stIter of
-        Nothing -> makeError ("Generator variable" ++ getIdentString varIdent ++ " not in scope") pos
+        Nothing -> makeError ("Generator variable " ++ getIdentString varIdent ++ " not in scope") pos
         Just (type_, genState, envVarIter) -> do
           let newEnv = (envVarIter, envProc, envGen)
           (ret, genState', envVarIter') <-
@@ -435,17 +454,19 @@ evalStmts ret_type pos (stmt : stmts) = do
       (stVar, stIter) <- get
       case M.lookup identGen envGen of
         Just (type_, args', block, envVarIter) -> do
+          let wholeEnv = (envVarIter, envProc, envGen)
+          liftIO $ putStrLn ("WYWOLANIE STAD")
+          (envVarIter', _, _) <- addArgsToEnvGen pos wholeEnv args' args
           let newLoc = getNewLocForGen stIter
           put (
             stVar,
             M.insert
               newLoc
-              (type_, [GenStateStmt (BStmt_T BNFC'NoPosition block)], envVarIter)
+              (type_, [GenStateStmt (BStmt_T BNFC'NoPosition block)], envVarIter')
               stIter)
           let envIter' = M.insert identVar newLoc envIter
           let newEnv = ((envVar, envIter'), envProc, envGen)
-          newEnv' <- addArgsToEnvGen pos newEnv args' args
-          local (const newEnv') (evalStmts ret_type pos stmts)
+          local (const newEnv) (evalStmts ret_type pos stmts)
         Nothing -> do
           makeError ("Generator " ++ show identGen ++ " not implemented") pos_decl
     Decl_T pos_decl typ ident expr -> do
@@ -525,7 +546,8 @@ evalStmt _ (Ass_T pos ident expr) = do
       case M.lookup loc stVar of
         Just (typ, _) ->
           if stringTypeOfType typ == stringTypeOfElit val
-            then put (M.insert loc (typ, val) stVar, stIter)
+            then do 
+              put (M.insert loc (typ, val) stVar, stIter)
             else makeError "Type mismatch" pos
         Nothing -> makeError "Variable not in scope" pos
   return NoRet
@@ -572,8 +594,8 @@ evalFor ret_type loc type_ gState env envForBlock block = do
   ((envVar, envIter), envProc, envGen) <- ask
   (stVar, stIter) <- get
   (ret, gSt, env') <- evalGenNextFor type_ gState env
-  (stVar', _) <- get
-  put (M.insert loc (type_, blockRetToElit ret) stVar', stIter)
+  (stVar', stIter') <- get
+  put (M.insert loc (type_, blockRetToElit ret) stVar', stIter')
   case ret of
     NoRet -> do
       return NoRet
@@ -622,7 +644,10 @@ evalVar :: Var -> RSE Loc
 evalVar (Var_T pos ident) = do
   ((envVar, _envIter), _envProc, envGen) <- ask
   case M.lookup ident envVar of
-    Nothing -> makeError ("Variable " ++ getIdentString ident ++ " not in scope") pos
+    Nothing -> do 
+      liftIO $ putStrLn ("looking for: " ++ show ident)
+      liftIO $ putStrLn ("ENVVAR: " ++ show envVar)
+      makeError ("Variable " ++ getIdentString ident ++ " not in scope") pos
     Just loc -> return loc
 
 getValFromExpr :: BlockReturn -> RSE ELit

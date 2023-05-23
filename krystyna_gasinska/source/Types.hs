@@ -41,5 +41,5 @@ data BlockRetType = RetType Type | NoRetType | YieldType Type
 
 type GenState = [GenStateElem]
 
-data GenStateElem = GenStateStmt Stmt | ReturnToEnv EnvVarIter | ForInfo (Type, Loc, GenState, EnvVarIter)
+data GenStateElem = GenStateStmt Stmt | ReturnToEnv EnvVarIter | ForInfo (Type, Loc, GenState, EnvVarIter, Block)
   deriving (Show)
