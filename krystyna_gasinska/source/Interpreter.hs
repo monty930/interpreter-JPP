@@ -193,6 +193,7 @@ addArgsToEnvGen pos env [] [] = return env
 
 -- args: what generator wants, funargs: what we get
 addArgsToEnvGen pos env (arg : args) (funarg : funargs) = do
+  ((envVar, envIter), envProc, envGen) <- ask
   case funarg of
     AsValue_T pos expr -> do
       retFromExpr <- evalExpr expr
@@ -205,7 +206,7 @@ addArgsToEnvGen pos env (arg : args) (funarg : funargs) = do
           let ((envVar, envIter), envProc, envGen) = env
           let envVar' = M.insert (getArgIdent arg) newLoc envVar
           let env' = ((envVar', envIter), envProc, envGen)
-          local (const env') (addArgsToEnvGen pos env' args funargs)
+          addArgsToEnvGen pos env' args funargs
         else do
           makeError "Wrong argument type" pos
     AsRef_T pos var -> do
@@ -220,7 +221,7 @@ addArgsToEnvGen pos env (arg : args) (funarg : funargs) = do
                   let ((envVar, envIter), envProc, envGen) = env
                   let envVar' = M.insert (getArgIdent arg) loc envVar
                   let env' = ((envVar', envIter), envProc, envGen)
-                  local (const env') (addArgsToEnvGen pos env' args funargs)
+                  addArgsToEnvGen pos env' args funargs
                 else do
                   makeError "Wrong argument type" pos
             Nothing -> do
@@ -455,8 +456,8 @@ evalStmts ret_type pos (stmt : stmts) = do
       case M.lookup identGen envGen of
         Just (type_, args', block, envVarIter) -> do
           let wholeEnv = (envVarIter, envProc, envGen)
-          liftIO $ putStrLn ("WYWOLANIE STAD")
           (envVarIter', _, _) <- addArgsToEnvGen pos wholeEnv args' args
+          (stVar, stIter) <- get
           let newLoc = getNewLocForGen stIter
           put (
             stVar,
@@ -645,8 +646,6 @@ evalVar (Var_T pos ident) = do
   ((envVar, _envIter), _envProc, envGen) <- ask
   case M.lookup ident envVar of
     Nothing -> do 
-      liftIO $ putStrLn ("looking for: " ++ show ident)
-      liftIO $ putStrLn ("ENVVAR: " ++ show envVar)
       makeError ("Variable " ++ getIdentString ident ++ " not in scope") pos
     Just loc -> return loc
 
