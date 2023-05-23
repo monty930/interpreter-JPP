@@ -2,39 +2,35 @@
 
 module Main where
 
-import Prelude
-import Data.Char ( ord, chr )
-import System.Environment ( getArgs )
-import System.Exit        ( exitFailure )
-import Control.Monad      ( when )
-import System.IO (hPutStrLn, stderr)
-
 import AbsGrammar
-import LexGrammar   ( Token, mkPosToken )
-import ParGrammar   ( pProgram, myLexer )
-import PrintGrammar ( Print, printTree )
-import SkelGrammar  ()
-import Parse
-import Helper
-import TypeChecker
-import Types
-
-import qualified Data.Map as M
-import Control.Monad.Reader
-import Control.Monad.State
+import Control.Monad (when)
 import Control.Monad.Except
 import Control.Monad.Identity
+import Control.Monad.Reader
+import Control.Monad.State
+import Data.Char (chr, ord)
+import qualified Data.Map as M
+import Helper
+import LexGrammar (Token, mkPosToken)
+import ParGrammar (myLexer, pProgram)
+import Parse
+import PrintGrammar (Print, printTree)
+import SkelGrammar ()
+import System.Environment (getArgs)
+import System.Exit (exitFailure)
+import System.IO (hPutStrLn, stderr)
+import TypeChecker
+import Types
+import Prelude
 
 -- Generators
 
 evalGenState :: BlockRetType -> GenState -> RSE (BlockReturn, GenState, EnvVarIter)
 evalGenState ret_type [] = do
-    (envVarIter, _envProc, _envGen) <- ask
-    return (NoRet, [], envVarIter)
-
+  (envVarIter, _envProc, _envGen) <- ask
+  return (NoRet, [], envVarIter)
 evalGenState ret_type ((BStmt_T _ (Block_T _ b)) : stmts) = do
   evalGenState ret_type (b ++ stmts)
-
 evalGenState ret_type ((Decl_T pos typ ident expr) : stmts) = do
   retFromExpr <- evalExpr expr
   val <- getValFromExpr retFromExpr
@@ -50,7 +46,6 @@ evalGenState ret_type ((Decl_T pos typ ident expr) : stmts) = do
       local (const newEnv) (evalGenState ret_type stmts)
     else do
       makeError "Type mismatch" pos
-
 evalGenState ret_type ((Yield_T pos expr) : stmts) = do
   retFromExpr <- evalExpr expr
   val <- getValFromExpr retFromExpr
@@ -61,11 +56,9 @@ evalGenState ret_type ((Yield_T pos expr) : stmts) = do
         then return (Yield val, stmts, envVarIter)
         else makeError "Type mismatch" pos
     _ -> makeError "Unexpected yield" pos
-
 evalGenState ret_type ((SExp_T _ expr) : stmts) = do
   evalExpr expr
   evalGenState ret_type stmts
-
 evalGenState ret_type ((Cond_T pos expr block) : stmts) = do
   retFromExpr <- evalExpr expr
   val <- getValFromExpr retFromExpr
@@ -78,8 +71,7 @@ evalGenState ret_type ((Cond_T pos expr block) : stmts) = do
         Ret _ -> makeError "Unexpected return" pos
     ELitBool_T _ (ELitFalse_T _) -> evalGenState ret_type stmts
     _CondType -> makeError "Wrong condition type" pos
-
-evalGenState ret_type ((CondElse_T pos expr b_true b_false) : stmts) = do 
+evalGenState ret_type ((CondElse_T pos expr b_true b_false) : stmts) = do
   retFromExpr <- evalExpr expr
   val <- getValFromExpr retFromExpr
   case val of
@@ -96,10 +88,8 @@ evalGenState ret_type ((CondElse_T pos expr b_true b_false) : stmts) = do
         NoRet -> evalGenState ret_type stmts
         Ret _ -> makeError "Unexpected return" pos
     _CondType -> makeError "Wrong condition type" pos
-
-evalGenState ret_type ((Empty_T pos) : stmts) = do 
+evalGenState ret_type ((Empty_T pos) : stmts) = do
   evalGenState ret_type stmts
-
 evalGenState ret_type ((While_T pos expr block) : stmts) = do
   retFromExpr <- evalExpr expr
   val <- getValFromExpr retFromExpr
@@ -112,16 +102,14 @@ evalGenState ret_type ((While_T pos expr block) : stmts) = do
         Ret _ -> makeError "Unexpected return" pos
     ELitBool_T _ (ELitFalse_T _) -> evalGenState ret_type stmts
     _CondType -> makeError "Wrong condition type" pos
-
-evalGenState ret_type ((Return_T pos expr) : _) = do 
+evalGenState ret_type ((Return_T pos expr) : _) = do
   makeError "Return statement outside procedure" pos
-
-evalGenState ret_type ((DeclGen_T pos ident1 ident2 funargs) : stmts) = do 
+evalGenState ret_type ((DeclGen_T pos ident1 ident2 funargs) : stmts) = do
   ((envVar, envIter), envProc, envGen) <- ask
   (stVar, stIter) <- get
-  
+
   case M.lookup ident2 envGen of
-    Just (type_, args, block, envVarIter) -> do 
+    Just (type_, args, block, envVarIter) -> do
       let newLoc = getNewLocForGen stIter
       -- add arguments to environment TODO
       put (stVar, M.insert newLoc (type_, [], envVarIter) stIter)
@@ -130,15 +118,12 @@ evalGenState ret_type ((DeclGen_T pos ident1 ident2 funargs) : stmts) = do
       local (const newEnv) (evalGenState ret_type stmts)
     Nothing -> do
       makeError "Generator not implemented yet" pos
-
-evalGenState ret_type ((Incr_T pos ident) : stmts) = do 
+evalGenState ret_type ((Incr_T pos ident) : stmts) = do
   modifyVariable pos ident (+ 1)
   evalGenState ret_type stmts
-
 evalGenState ret_type ((Decr_T pos ident) : stmts) = do
   modifyVariable pos ident (\x -> x - 1)
   evalGenState ret_type stmts
-
 evalGenState ret_type ((Ass_T pos ident expr) : stmts) = do
   ((envVar, _envIter), _envProc, _envGen) <- ask
   (stVar, stIter) <- get
@@ -150,28 +135,27 @@ evalGenState ret_type ((Ass_T pos ident expr) : stmts) = do
       case M.lookup loc stVar of
         Just (typ, _) ->
           if stringTypeOfType typ == stringTypeOfElit val
-            then do 
+            then do
               put (M.insert loc (typ, val) stVar, stIter)
               evalGenState ret_type stmts
             else makeError "Type mismatch" pos
         Nothing -> makeError "Variable not in scope" pos
-
 evalGenState ret_type ((ForGen_T pos ident1 ident2 funargs block) : stmts) = do undefined
-  -- ((envVar, envIter), envProc, envGen) <- ask
-  -- (stVar, stIter) <- get
-  -- case M.lookup identGen envGen of
-  --   Nothing -> do
-  --     makeError "Generator not implemented yet" pos
-  --   Just (type_, args', block, envVarIter) -> do
-  --     -- add variable to environment
-  --     let newLoc = getNewLoc stVar 
-  --     liftIO $ putStrLn ("NEWLOC for J: " ++ show newLoc)
-  --     let newStVar = M.insert newLoc (defaultValue type_) stVar
-  --     put (newStVar, stIter)
-  --     let envVarForBlock = M.insert identVar newLoc envVar
-  --     let envForBlock = (envVarForBlock, envIter)
-  --     evalForGenState ret_type 
 
+-- ((envVar, envIter), envProc, envGen) <- ask
+-- (stVar, stIter) <- get
+-- case M.lookup identGen envGen of
+--   Nothing -> do
+--     makeError "Generator not implemented yet" pos
+--   Just (type_, args', block, envVarIter) -> do
+--     -- add variable to environment
+--     let newLoc = getNewLoc stVar
+--     liftIO $ putStrLn ("NEWLOC for J: " ++ show newLoc)
+--     let newStVar = M.insert newLoc (defaultValue type_) stVar
+--     put (newStVar, stIter)
+--     let envVarForBlock = M.insert identVar newLoc envVar
+--     let envForBlock = (envVarForBlock, envIter)
+--     evalForGenState ret_type
 
 ---------------------------
 
@@ -236,60 +220,63 @@ evalTopDefs (topdef : topdefs) = do
 
 bindArgsToEnv :: BNFC'Position -> [Arg] -> [ELit] -> [Arg] -> [Loc] -> EnvVar -> RSE EnvVar
 bindArgsToEnv _ [] [] [] [] envVar = return envVar
-
 bindArgsToEnv pos (arg : args) (val : vals) refs locs envVar = do
-  if stringTypeOfArg arg == stringTypeOfElit val then do
-    (stVar, stIter) <- get
-    let newLoc = getNewLoc stVar
-    put (M.insert newLoc (typeOfArg arg, val) stVar, stIter)
-    let envVar' = M.insert (getArgIdent arg) newLoc envVar
-    ((_, envIter), envProc, envGen) <- ask
-    let newEnv = ((envVar', envIter), envProc, envGen)
-    local (const newEnv) (bindArgsToEnv pos args vals refs locs envVar')
-  else do
-    makeError "Wrong argument type" pos
-
+  if stringTypeOfArg arg == stringTypeOfElit val
+    then do
+      (stVar, stIter) <- get
+      let newLoc = getNewLoc stVar
+      put (M.insert newLoc (typeOfArg arg, val) stVar, stIter)
+      let envVar' = M.insert (getArgIdent arg) newLoc envVar
+      ((_, envIter), envProc, envGen) <- ask
+      let newEnv = ((envVar', envIter), envProc, envGen)
+      local (const newEnv) (bindArgsToEnv pos args vals refs locs envVar')
+    else do
+      makeError "Wrong argument type" pos
 bindArgsToEnv pos args vals (ref : refs) (loc : locs) envVar = do
   (stVar, _stIter) <- get
   ((_, envIter), envProc, envGen) <- ask
   case M.lookup loc stVar of
     Just (type_, _) -> do
-      if stringTypeOfArg ref == stringTypeOfType type_ then do
-        let envVar' = M.insert (getArgIdent ref) loc envVar
-        let newEnv = ((envVar', envIter), envProc, envGen)
-        local (const newEnv) (bindArgsToEnv pos args vals refs locs envVar')
-      else do
-        makeError "Wrong argument type" pos
+      if stringTypeOfArg ref == stringTypeOfType type_
+        then do
+          let envVar' = M.insert (getArgIdent ref) loc envVar
+          let newEnv = ((envVar', envIter), envProc, envGen)
+          local (const newEnv) (bindArgsToEnv pos args vals refs locs envVar')
+        else do
+          makeError "Wrong argument type" pos
     Nothing -> do
       makeError "Variable not in scope" pos
-
 bindArgsToEnv pos _ _ _ _ _ = do
   error "Wrong number of arguments" pos
 
 evalApp :: BNFC'Position -> Ident -> [FunArg] -> RSE BlockReturn
 evalApp pos ident args = do
-    if getIdentString ident == "print" then printImpl pos args else do
-      if getIdentString ident == "print_line" then printLnImpl pos args else do
-        ((envVar, envIter), envProc, envGen) <- ask
-        (ret, args', block, (envVar', envIter')) <- case M.lookup ident envProc of
-          Just (ret, args', block, (envVar', envIter')) -> return (ret, args', block, (envVar', envIter'))
-          Nothing ->
-            case pos of
-              BNFC'NoPosition -> makeError "There is no 'main' procedure!" pos
-              _ -> makeError ("Procedure " ++ getIdentString ident ++ " does not exist") pos
-        (argVals, argsByVal) <- evalFunArgsAsValues pos args args'
-        (argLocs, argsByRef) <- evalFunArgsAsRefs pos args args'
-        newEnvVar <- bindArgsToEnv pos argsByVal argVals argsByRef argLocs envVar'
-        let newEnv = ((newEnvVar, envIter'), envProc, envGen)
-        ret_type <- if stringFunctionType ret == "void" then return NoRetType else return (RetType (typeOfRetVal ret))
-        returned <- local (const newEnv) (evalBlock ret_type block)
-        case returned of
-          Ret val -> do
-            if stringTypeOfElit val == stringFunctionType ret then return (Ret val) else makeError "Wrong return type" pos
-          NoRet -> do
-            if stringFunctionType ret == "void" then return NoRet else makeError "Missing return statement" pos
-          Yield val -> do
-            makeError "Yield statement outside generator" pos
+  if getIdentString ident == "print"
+    then printImpl pos args
+    else do
+      if getIdentString ident == "print_line"
+        then printLnImpl pos args
+        else do
+          ((envVar, envIter), envProc, envGen) <- ask
+          (ret, args', block, (envVar', envIter')) <- case M.lookup ident envProc of
+            Just (ret, args', block, (envVar', envIter')) -> return (ret, args', block, (envVar', envIter'))
+            Nothing ->
+              case pos of
+                BNFC'NoPosition -> makeError "There is no 'main' procedure!" pos
+                _ -> makeError ("Procedure " ++ getIdentString ident ++ " does not exist") pos
+          (argVals, argsByVal) <- evalFunArgsAsValues pos args args'
+          (argLocs, argsByRef) <- evalFunArgsAsRefs pos args args'
+          newEnvVar <- bindArgsToEnv pos argsByVal argVals argsByRef argLocs envVar'
+          let newEnv = ((newEnvVar, envIter'), envProc, envGen)
+          ret_type <- if stringFunctionType ret == "void" then return NoRetType else return (RetType (typeOfRetVal ret))
+          returned <- local (const newEnv) (evalBlock ret_type block)
+          case returned of
+            Ret val -> do
+              if stringTypeOfElit val == stringFunctionType ret then return (Ret val) else makeError "Wrong return type" pos
+            NoRet -> do
+              if stringFunctionType ret == "void" then return NoRet else makeError "Missing return statement" pos
+            Yield val -> do
+              makeError "Yield statement outside generator" pos
 
 typeOfRetVal :: RetVal -> Type
 typeOfRetVal (FunRetVal_T _ type_) = type_
@@ -301,7 +288,6 @@ evalFunArgsAsValues pos args idfs = do
 
 evalFunArgsAsValuesAcc :: BNFC'Position -> [FunArg] -> [Arg] -> ([ELit], [Arg]) -> RSE ([ELit], [Arg])
 evalFunArgsAsValuesAcc pos [] [] acc = return acc
-
 evalFunArgsAsValuesAcc pos (arg : args) (idf : idfs) (argVals, argsByVal) = do
   case arg of
     AsValue_T pos expr -> do
@@ -310,7 +296,6 @@ evalFunArgsAsValuesAcc pos (arg : args) (idf : idfs) (argVals, argsByVal) = do
       evalFunArgsAsValuesAcc pos args idfs (argVals ++ [val], argsByVal ++ [idf])
     AsRef_T pos var -> do
       evalFunArgsAsValuesAcc pos args idfs (argVals, argsByVal)
-
 evalFunArgsAsValuesAcc pos _ _ _ = do
   makeError "Wrong number of arguments" pos
 
@@ -320,7 +305,6 @@ evalFunArgsAsRefs pos args idfs = do
 
 evalFunArgsAsRefsAcc :: BNFC'Position -> [FunArg] -> [Arg] -> ([Loc], [Arg]) -> RSE ([Loc], [Arg])
 evalFunArgsAsRefsAcc _ [] [] acc = return acc
-
 evalFunArgsAsRefsAcc pos (arg : args) (idf : idfs) (argLocs, argsByRef) = do
   case arg of
     AsValue_T pos expr -> do
@@ -328,7 +312,6 @@ evalFunArgsAsRefsAcc pos (arg : args) (idf : idfs) (argLocs, argsByRef) = do
     AsRef_T pos var -> do
       loc <- evalVar var
       evalFunArgsAsRefsAcc pos args idfs (argLocs ++ [loc], argsByRef ++ [idf])
-
 evalFunArgsAsRefsAcc pos _ _ _ = do
   error "Wrong number of arguments" pos
 
@@ -360,9 +343,8 @@ printLnImpl pos args = do
         _ -> makeError "Wrong argument type" pos
     _ -> makeError "Wrong number of arguments" pos
 
-
 evalGenNext :: BNFC'Position -> Ident -> RSE BlockReturn
-evalGenNext pos varIdent = do 
+evalGenNext pos varIdent = do
   ((envVar, envIter), envProc, envGen) <- ask
   (stVar, stIter) <- get
   case M.lookup varIdent envIter of
@@ -414,8 +396,8 @@ evalStmts ret_type pos (stmt : stmts) = do
           let envVar' = M.insert ident newLoc envVar
           let newEnv = ((envVar', envIter), envProc, envGen)
           local (const newEnv) (evalStmts ret_type pos stmts)
-      else do
-        makeError "Type mismatch" pos_decl
+        else do
+          makeError "Type mismatch" pos_decl
     _notDecl -> do
       ret <- evalStmt ret_type stmt
       case ret of
@@ -426,20 +408,15 @@ evalStmts _ pos [] = return NoRet
 
 evalStmt :: BlockRetType -> Stmt -> RSE BlockReturn
 evalStmt _ (Empty_T _) = return NoRet
-
 evalStmt ret_type (BStmt_T _ block) = do
   evalBlock ret_type block
-
 evalStmt _ Decl_T {} = undefined -- intended: declaration handled in evalStmts
-
 evalStmt _ (Decr_T pos ident) = do
   modifyVariable pos ident (\x -> x - 1)
   return NoRet
-
 evalStmt _ (Incr_T pos ident) = do
   modifyVariable pos ident (+ 1)
   return NoRet
-
 evalStmt ret_type (Cond_T pos expr block) = do
   retFromExpr <- evalExpr expr
   val <- getValFromExpr retFromExpr
@@ -447,7 +424,6 @@ evalStmt ret_type (Cond_T pos expr block) = do
     ELitBool_T _ (ELitTrue_T _) -> evalBlock ret_type block
     ELitBool_T _ (ELitFalse_T _) -> return NoRet
     _CondType -> makeError "Wrong condition type" pos
-
 evalStmt ret_type (CondElse_T pos expr block1 block2) = do
   retFromExpr <- evalExpr expr
   val <- getValFromExpr retFromExpr
@@ -455,7 +431,6 @@ evalStmt ret_type (CondElse_T pos expr block1 block2) = do
     ELitBool_T _ (ELitTrue_T _) -> evalBlock ret_type block1
     ELitBool_T _ (ELitFalse_T _) -> evalBlock ret_type block2
     _CondType -> makeError "Wrong condition type" pos
-
 evalStmt ret_type (While_T pos expr block) = do
   retFromExpr <- evalExpr expr
   val <- getValFromExpr retFromExpr
@@ -465,7 +440,6 @@ evalStmt ret_type (While_T pos expr block) = do
       evalStmt ret_type (While_T pos expr block)
     ELitBool_T _ (ELitFalse_T _) -> return NoRet
     _CondType -> makeError "Wrong condition type" pos
-
 evalStmt _ (Ass_T pos ident expr) = do
   ((envVar, _envIter), _envProc, _envGen) <- ask
   (stVar, stIter) <- get
@@ -481,26 +455,19 @@ evalStmt _ (Ass_T pos ident expr) = do
             else makeError "Type mismatch" pos
         Nothing -> makeError "Variable not in scope" pos
   return NoRet
-
-
 evalStmt (RetType type_) (Return_T pos expr) = do
   retFromExpr <- evalExpr expr
   val <- getValFromExpr retFromExpr
   return (Ret val)
-
 evalStmt _ (Return_T pos _) = do
   makeError "Unexpected return" pos
-
 evalStmt _ (SExp_T _ expr) = do
   evalExpr expr
   return NoRet
-
 evalStmt _ (Yield_T pos expr) = do
   undefined -- intended
-
 evalStmt _ (DeclGen_T pos var gen args) = undefined -- intended: declaration handled in evalStmts
-
-evalStmt ret_type (ForGen_T pos identVar identGen args for_block) = do 
+evalStmt ret_type (ForGen_T pos identVar identGen args for_block) = do
   ((envVar, envIter), envProc, envGen) <- ask
   (stVar, stIter) <- get
   case M.lookup identGen envGen of
@@ -508,14 +475,14 @@ evalStmt ret_type (ForGen_T pos identVar identGen args for_block) = do
       makeError "Generator not implemented yet" pos
     Just (type_, args', block, envVarIter) -> do
       -- add variable to environment
-      let newLoc = getNewLoc stVar 
+      let newLoc = getNewLoc stVar
       let newStVar = M.insert newLoc (defaultValue type_) stVar
       put (newStVar, stIter)
       let envVarForBlock = M.insert identVar newLoc envVar
       let envForBlock = (envVarForBlock, envIter)
       evalFor ret_type newLoc type_ [BStmt_T BNFC'NoPosition block] envVarIter envForBlock for_block
 
-blockRetToElit :: BlockReturn -> ELit 
+blockRetToElit :: BlockReturn -> ELit
 blockRetToElit (Yield val) = val
 blockRetToElit (Ret val) = undefined -- intended
 blockRetToElit NoRet = undefined -- intended
@@ -527,12 +494,12 @@ evalFor ret_type loc type_ gState env envForBlock block = do
   (ret, gSt, env') <- evalGenNextFor type_ gState env
   (stVar', _) <- get
   put (M.insert loc (type_, blockRetToElit ret) stVar', stIter)
-  case ret of 
+  case ret of
     NoRet -> do
       return NoRet
     _ -> do
       ret <- local (const (envForBlock, envProc, envGen)) (evalBlock ret_type block)
-      case ret of 
+      case ret of
         Ret val -> do
           return (Ret val)
         Yield val -> do
@@ -541,7 +508,7 @@ evalFor ret_type loc type_ gState env envForBlock block = do
           evalFor ret_type loc type_ gSt env' envForBlock block
 
 evalGenNextFor :: Type -> GenState -> EnvVarIter -> RSE (BlockReturn, GenState, EnvVarIter)
-evalGenNextFor type_ gState envVarIter = do 
+evalGenNextFor type_ gState envVarIter = do
   ((envVar, envIter), envProc, envGen) <- ask
   (stVar, stIter) <- get
   let newEnv = (envVarIter, envProc, envGen)
@@ -549,7 +516,7 @@ evalGenNextFor type_ gState envVarIter = do
   return res
 
 defaultValue :: Type -> (Type, ELit)
-defaultValue type_ = 
+defaultValue type_ =
   case type_ of
     Int_T _ -> (type_, ELitInt_T BNFC'NoPosition 0)
     Bool_T _ -> (type_, ELitBool_T BNFC'NoPosition (ELitFalse_T BNFC'NoPosition))
@@ -592,16 +559,13 @@ evalExpr (EVar_T pos var) = do
   case M.lookup loc stVar of
     Nothing -> makeError "Variable not in scope" pos
     Just (_, val) -> return (Ret val)
-
 evalExpr (ELit_T _ lit) = return (Ret lit)
-
 evalExpr (Neg_T pos expr) = do
   retFromExpr <- evalExpr expr
   val <- getValFromExpr retFromExpr
   case val of
     ELitInt_T _ val -> return (Ret (ELitInt_T pos (- val)))
     _ -> makeError "Wrong operation argument" pos
-
 evalExpr (Not_T pos expr) = do
   retFromExpr <- evalExpr expr
   val <- getValFromExpr retFromExpr
@@ -609,7 +573,6 @@ evalExpr (Not_T pos expr) = do
     ELitBool_T _ (ELitTrue_T _) -> return (Ret (ELitBool_T pos (ELitFalse_T pos)))
     ELitBool_T _ (ELitFalse_T _) -> return (Ret (ELitBool_T pos (ELitTrue_T pos)))
     _ -> makeError "Wrong operation argument" pos
-
 evalExpr (EMul_T pos expr1 mulOp expr2) = do
   retFromExpr1 <- evalExpr expr1
   val1 <- getValFromExpr retFromExpr1
@@ -625,7 +588,6 @@ evalExpr (EMul_T pos expr1 mulOp expr2) = do
             else return (Ret (ELitInt_T pos (val1' `div` val2')))
         Mod_T _ -> return (Ret (ELitInt_T pos (val1' `mod` val2')))
     _ -> makeError "Wrong operation argument" pos
-
 evalExpr (EAdd_T pos expr1 addOp expr2) = do
   retFromExpr1 <- evalExpr expr1
   val1 <- getValFromExpr retFromExpr1
@@ -641,7 +603,6 @@ evalExpr (EAdd_T pos expr1 addOp expr2) = do
         Plus_T _ -> return (Ret (EString_T pos (val1' ++ val2')))
         _ -> makeError "Wrong operation argument" pos
     _ -> makeError "Wrong operation argument" pos
-
 evalExpr (EOr_T pos expr1 expr2) = do
   retFromExpr1 <- evalExpr expr1
   val1 <- getValFromExpr retFromExpr1
@@ -655,7 +616,6 @@ evalExpr (EOr_T pos expr1 expr2) = do
         ELitBool_T _ (ELitFalse_T _) -> return (Ret (ELitBool_T pos (ELitFalse_T pos)))
         _ -> makeError "Wrong operation argument" pos
     _ -> makeError "Wrong operation argument" pos
-
 evalExpr (EAnd_T pos expr1 expr2) = do
   retFromExpr1 <- evalExpr expr1
   val1 <- getValFromExpr retFromExpr1
@@ -669,7 +629,6 @@ evalExpr (EAnd_T pos expr1 expr2) = do
         ELitBool_T _ (ELitFalse_T _) -> return (Ret (ELitBool_T pos (ELitFalse_T pos)))
         _ -> makeError "Wrong operation argument" pos
     _ -> makeError "Wrong operation argument" pos
-
 evalExpr (ERel_T pos expr1 relOp expr2) = do
   retFromExpr1 <- evalExpr expr1
   val1 <- getValFromExpr retFromExpr1
@@ -700,7 +659,6 @@ evalExpr (ERel_T pos expr1 relOp expr2) = do
         NE_T _ -> return (Ret (ELitBool_T pos (if val1' /= val2' then ELitTrue_T pos else ELitFalse_T pos)))
         _ -> makeError "Wrong operation argument" pos
     _ -> makeError "Wrong operation argument" pos
-
 evalExpr (ECast_T pos type_ expr) = do
   retFromExpr <- evalExpr expr
   val <- getValFromExpr retFromExpr
@@ -709,8 +667,7 @@ evalExpr (ECast_T pos type_ expr) = do
     (ELitInt_T _ val', CharT_T _) -> do
       if val' < 0 || val' > 1114111
         then makeError "Integer too big to convert" pos
-        else
-          return (Ret (EChar_T pos (chr (fromInteger val'))))
+        else return (Ret (EChar_T pos (chr (fromInteger val'))))
     (ELitInt_T _ val', Str_T _) -> return (Ret (EString_T pos (show val')))
     (ELitInt_T _ val', Bool_T _) ->
       return (Ret (ELitBool_T pos (if val' == 0 then ELitFalse_T pos else ELitTrue_T pos)))
@@ -728,15 +685,13 @@ evalExpr (ECast_T pos type_ expr) = do
     (ELitBool_T _ val', Bool_T _) -> return (Ret val)
     (EString_T _ val', Str_T _) -> return (Ret val)
     _wrong_type -> makeError "Wrong cast argument" pos
-
 evalExpr (App_T pos ident args) = do
   ret <- evalApp pos ident args
   case ret of
     Ret val -> return (Ret val)
     NoRet -> return NoRet
     Yield _ -> makeError "Unexpected yield" pos
-
-evalExpr (EGenNext_T pos ident) = do 
+evalExpr (EGenNext_T pos ident) = do
   ret <- evalGenNext pos ident
   case ret of
     Yield val -> return (Ret val)
@@ -753,9 +708,14 @@ printProcArg = undefined -- intended
 
 initialEnvProc :: EnvProc
 initialEnvProc =
-  M.insert (Ident "print") (FunRetVoid_T BNFC'NoPosition, printProcArg, printBlock, initialEnvVarIter)
-  (M.insert (Ident "print_line") (FunRetVoid_T BNFC'NoPosition, printProcArg, printBlock, initialEnvVarIter)
-  M.empty)
+  M.insert
+    (Ident "print")
+    (FunRetVoid_T BNFC'NoPosition, printProcArg, printBlock, initialEnvVarIter)
+    ( M.insert
+        (Ident "print_line")
+        (FunRetVoid_T BNFC'NoPosition, printProcArg, printBlock, initialEnvVarIter)
+        M.empty
+    )
 
 initialEnvGen :: EnvGen
 initialEnvGen = M.empty
@@ -770,8 +730,8 @@ main :: IO ()
 main = do
   args <- getArgs
   p <- case args of
-    []         -> getContents >>= getParsedProgram pProgram
-    [fs]       -> getParsedProgramFromFile pProgram fs
+    [] -> getContents >>= getParsedProgram pProgram
+    [fs] -> getParsedProgramFromFile pProgram fs
     _more_args -> error "Program takes zero or one argument"
 
   result <- runExceptT $ runStateT (runReaderT (interpretProgram p) initialEnv) initialStore
