@@ -23,8 +23,6 @@ import TypeChecker
 import Types
 import Prelude
 
--- Generators
-
 evalGenState :: BlockRetType -> GenState -> RSE (BlockReturn, GenState, EnvVarIter)
 evalGenState ret_type [] = do
   (envVarIter, _envProc, _envGen) <- ask
@@ -348,13 +346,19 @@ evalApp pos ident args = do
           (argLocs, argsByRef) <- evalFunArgsAsRefs pos args args'
           newEnvVar <- bindArgsToEnv pos argsByVal argVals argsByRef argLocs envVar'
           let newEnv = ((newEnvVar, envIter'), envProc, envGen)
-          ret_type <- if stringFunctionType ret == "void" then return NoRetType else return (RetType (typeOfRetVal ret))
+          ret_type <- if stringFunctionType ret == "void"
+            then return NoRetType
+            else return (RetType (typeOfRetVal ret))
           returned <- local (const newEnv) (evalBlock ret_type block)
           case returned of
             Ret val -> do
-              if stringTypeOfElit val == stringFunctionType ret then return (Ret val) else makeError "Wrong return type" pos
+              if stringTypeOfElit val == stringFunctionType ret
+                then return (Ret val) 
+                else makeError "Wrong return type" pos
             NoRet -> do
-              if stringFunctionType ret == "void" then return NoRet else makeError "Missing return statement" pos
+              if stringFunctionType ret == "void"
+                then return NoRet 
+                else makeError "Missing return statement" pos
             Yield val -> do
               makeError "Yield statement outside generator" pos
 
@@ -583,7 +587,14 @@ evalStmt ret_type (ForGen_T pos identVar identGen args for_body) = do
       put (newStVar, stIter)
       let envVarForBlock = M.insert identVar newLoc envVar
       let envForBlock = (envVarForBlock, envIter)
-      evalFor ret_type newLoc type_ [GenStateStmt (BStmt_T BNFC'NoPosition block)] envVarIter envForBlock for_body
+      evalFor 
+        ret_type 
+        newLoc 
+        type_ 
+        [GenStateStmt (BStmt_T BNFC'NoPosition block)] 
+        envVarIter 
+        envForBlock 
+        for_body
 
 blockRetToElit :: BlockReturn -> ELit
 blockRetToElit (Yield val) = val
