@@ -8,53 +8,53 @@ import subprocess
 # Path to the interpreter executable
 INTERPRETER_PATH = "../interpreter"
 
+PATH_FOR_INTERPRETER = "./type_checker_tests/tests/"
+
 # Directory path for the test files
-TEST_DIR = "./tests"
+TEST_DIR = "./tests/"
+absolute_path = os.path.dirname(__file__)
+TEST_DIR = os.path.join(absolute_path, TEST_DIR)
 
 # Directory path for the expected output files
 EXPECTED_OUT_DIR = "./expected_output"
+EXPECTED_OUT_DIR = os.path.join(absolute_path, EXPECTED_OUT_DIR)
 
-def compare_output(test_number):
-    """
-    Compare test output with expected output.
-    """
-    test_file = f"{test_number:02d}-test.txt"
-    expected_output_file = os.path.join(EXPECTED_OUT_DIR, f"{test_number:02d}.out")
-    expected_error_file = os.path.join(EXPECTED_OUT_DIR, f"{test_number:02d}.err")
+FILE_LIST = sorted(os.listdir(TEST_DIR))
 
-    # Run the interpreter program with the test file as an argument
-    command = [INTERPRETER_PATH, os.path.join(TEST_DIR, test_file)]
-    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+for file in FILE_LIST:
+    file_path = os.path.join(TEST_DIR, file)
+    file_path_arg_int = os.path.join(PATH_FOR_INTERPRETER, file)
+    output_path = os.path.join(EXPECTED_OUT_DIR, file[0:2] + ".out")
+    error_output_path = os.path.join(EXPECTED_OUT_DIR, file[0:2] + ".err")
+
+    process = subprocess.Popen(["./interpreter", file_path_arg_int], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = process.communicate()
-    stdout = stdout.decode().strip()
-    stderr = stderr.decode().strip()
 
-    # Compare the stdout with the expected output
-    with open(expected_output_file, "r", encoding="utf-8") as expected_output:
-        expected_stdout = expected_output.read().strip()
-        if stdout != expected_stdout:
-            print(f"Test {test_number:02d}: Incorrect stdout")
-            print("Expected:")
-            print(expected_stdout)
-            print("Actual:")
-            print(stdout)
-            return
+    # Read the expected output
+    with open(output_path, 'r', encoding='utf-8') as f:
+        expected_output = f.read()
 
-    # Compare the stderr with the expected error output
-    with open(expected_error_file, "r", encoding="utf-8") as expected_error:
-        expected_stderr = expected_error.read().strip()
-        if stderr != expected_stderr:
-            print(f"Test {test_number:02d}: Incorrect stderr")
-            print("Expected:")
-            print(expected_stderr)
-            print("Actual:")
-            print(stderr)
-            return
+    # Read the expected error output
+    with open(error_output_path, 'r', encoding='utf-8') as f:
+        expected_err_output = f.read()
 
-    print(f"Test {test_number:02d}: Passed")
+    # Compare the output with the expected output
+    if stdout.decode().strip() != expected_output.strip():
+        print(f"Output for {file_path_arg_int} is incorrect.")
+        print("Expected output:")
+        print(expected_output)
+        print("Actual output:")
+        print(stdout.decode())
+        break
 
-# Iterate over all test files in the directory
-for check_test_file in os.listdir(TEST_DIR):
-    if check_test_file.endswith(".txt"):
-        check_test_number = int(check_test_file[:2])
-        compare_output(check_test_number)
+    # Compare the error output with the expected error output
+    if stderr.decode().strip() != expected_err_output.strip():
+        print(f"Error output for {file_path_arg_int} is incorrect.")
+        print("Expected error output:")
+        print(expected_err_output)
+        print("Actual error output:")
+        print(stderr.decode())
+        break
+
+else:
+    print("All 'type_checker' outputs are correct.")
