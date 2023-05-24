@@ -42,3 +42,7 @@ showBNFC Nothing = ""
 makeError message bnfcPos = do
   let errorMessage = showBNFC bnfcPos ++ " " ++ message
   errorWithoutStackTrace errorMessage
+
+makeTypeError message bnfcPos = do
+  let errorMessage = "[type checker] " ++ showBNFC bnfcPos ++ " " ++ message
+  errorWithoutStackTrace errorMessage

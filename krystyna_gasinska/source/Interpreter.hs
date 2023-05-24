@@ -851,6 +851,8 @@ main = do
     [fs] -> getParsedProgramFromFile pProgram fs
     _more_args -> error "Program takes zero or one argument"
 
+  typeChecker p
+
   result <- runExceptT $ runStateT (runReaderT (interpretProgram p) initialEnv) initialStore
   case result of
     Left err -> putStrLn $ "Parse error: " ++ err
