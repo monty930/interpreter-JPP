@@ -57,4 +57,4 @@ for file in FILE_LIST:
         break
 
 else:
-    print("All 'type_checker' outputs are correct.")
+    print("All 'type_checker' outputs are correct. Number of tests: " + str(len(FILE_LIST)))

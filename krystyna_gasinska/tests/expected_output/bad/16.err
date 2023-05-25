@@ -1,1 +1,1 @@
-interpreter: line 8, column 5 Type mismatch
+interpreter: [type checker] line 8, column 5 Variable b has type bool but should have type int

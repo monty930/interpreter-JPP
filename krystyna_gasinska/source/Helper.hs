@@ -1,6 +1,8 @@
 module Helper where
 
 import AbsGrammar
+import Types 
+import qualified Data.Map as M
 
 getIdentString :: Ident -> String
 getIdentString (Ident str) = str
@@ -46,3 +48,18 @@ makeError message bnfcPos = do
 makeTypeError message bnfcPos = do
   let errorMessage = "[type checker] " ++ showBNFC bnfcPos ++ " " ++ message
   errorWithoutStackTrace errorMessage
+
+getNewLoc :: StoreVar -> Loc
+getNewLoc stVar =
+  case M.keys stVar of
+    [] -> 0
+    keys -> maximum keys + 1
+
+getNewLocForGen :: StoreIter -> Loc
+getNewLocForGen stIter =
+  case M.keys stIter of
+    [] -> 0
+    keys -> maximum keys + 1
+
+getVarIdent :: Var -> Ident
+getVarIdent (Var_T pos ident) = ident

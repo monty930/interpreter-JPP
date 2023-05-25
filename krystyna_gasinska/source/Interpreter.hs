@@ -233,18 +233,6 @@ addArgsToEnvGen pos _ _ _ = do
 identOfVar :: Var -> Ident
 identOfVar (Var_T _ ident) = ident
 
-getNewLocForGen :: StoreIter -> Loc
-getNewLocForGen stIter =
-  case M.keys stIter of
-    [] -> 0
-    keys -> maximum keys + 1
-
-getNewLoc :: StoreVar -> Loc
-getNewLoc stVar =
-  case M.keys stVar of
-    [] -> 0
-    keys -> maximum keys + 1
-
 interpretProgram :: Program -> RSE ()
 interpretProgram (Program_T _ topdefs) = do
   env <- evalTopDefs topdefs
