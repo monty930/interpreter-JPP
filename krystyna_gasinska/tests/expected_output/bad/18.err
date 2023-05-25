@@ -1,1 +1,1 @@
-interpreter: line 15, column 5 Wrong argument type
+interpreter: [type checker] line 2, column 3 Condition has type bool but should have type Bool

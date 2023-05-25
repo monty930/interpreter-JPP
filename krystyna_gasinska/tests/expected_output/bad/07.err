@@ -1,1 +1,1 @@
-interpreter: line 7, column 5 Wrong argument type
+interpreter: [type checker] line 7, column 17 Argument should be of type bool

@@ -1,1 +1,1 @@
-interpreter: line 9, column 5 Wrong argument type
+interpreter: [type checker] line 9, column 22 Argument should be of type int

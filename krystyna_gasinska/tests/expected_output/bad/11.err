@@ -1,1 +1,1 @@
-interpreter: [type checker] line 8, column 9 Expression should be of type int
+interpreter: [type checker] line 8, column 9 Add expression should be of type int or string

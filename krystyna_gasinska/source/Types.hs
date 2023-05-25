@@ -34,10 +34,10 @@ type Store = (StoreVar, StoreIter)
 type RSE a = ReaderT Env (StateT Store (ExceptT String IO)) a
 
 data BlockReturn = Ret ELit | NoRet | Yield ELit
-  deriving (Show)
+  deriving (Show, Eq)
 
 data BlockRetType = RetType Type | NoRetType | YieldType Type
-  deriving (Show)
+  deriving (Show, Eq)
 
 type GenState = [GenStateElem]
 

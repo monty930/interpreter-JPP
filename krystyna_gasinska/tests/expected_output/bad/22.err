@@ -1,1 +1,1 @@
-interpreter: line 4, column 5 Variable not in scope
+interpreter: [type checker] line 4, column 5 Variable Ident "z" undefined
