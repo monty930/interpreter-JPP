@@ -56,7 +56,7 @@ transStmt x = case x of
   AbsGrammar.Yield_T _ expr -> failure x
   AbsGrammar.DeclGen_T _ ident1 ident2 funargs -> failure x
   AbsGrammar.ForGen_T _ ident1 ident2 funargs block -> failure x
-  AbsGrammar.DeclList_T _ ident exprs -> failure x
+  AbsGrammar.DeclList_T _ type_ ident exprs -> failure x
   AbsGrammar.PushToList_T _ ident expr -> failure x
   AbsGrammar.PopFromList_T _ ident -> failure x
   AbsGrammar.AddToList_T _ ident expr1 expr2 -> failure x

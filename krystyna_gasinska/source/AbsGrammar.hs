@@ -5,8 +5,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-{-# HLINT ignore "Use camelCase" #-}
 
 -- | The abstract syntax of language grammar.
 
@@ -57,7 +55,7 @@ data Stmt' a
     | Yield_T a (Expr' a)
     | DeclGen_T a Ident Ident [FunArg' a]
     | ForGen_T a Ident Ident [FunArg' a] (Block' a)
-    | DeclList_T a Ident [Expr' a]
+    | DeclList_T a (Type' a) Ident [Expr' a]
     | PushToList_T a Ident (Expr' a)
     | PopFromList_T a Ident
     | AddToList_T a Ident (Expr' a) (Expr' a)
@@ -178,7 +176,7 @@ instance HasPosition Stmt where
     Yield_T p _ -> p
     DeclGen_T p _ _ _ -> p
     ForGen_T p _ _ _ _ -> p
-    DeclList_T p _ _ -> p
+    DeclList_T p _ _ _ -> p
     PushToList_T p _ _ -> p
     PopFromList_T p _ -> p
     AddToList_T p _ _ _ -> p

@@ -33,6 +33,7 @@ transTopDef x = case x of
 transArg :: Show a => AbsGrammar.Arg' a -> Result
 transArg x = case x of
   AbsGrammar.Arg_T _ type_ ident -> failure x
+  AbsGrammar.ArgList_T _ ident -> failure x
 
 transBlock :: Show a => AbsGrammar.Block' a -> Result
 transBlock x = case x of
@@ -55,6 +56,11 @@ transStmt x = case x of
   AbsGrammar.Yield_T _ expr -> failure x
   AbsGrammar.DeclGen_T _ ident1 ident2 funargs -> failure x
   AbsGrammar.ForGen_T _ ident1 ident2 funargs block -> failure x
+  AbsGrammar.DeclList_T _ ident exprs -> failure x
+  AbsGrammar.PushToList_T _ ident expr -> failure x
+  AbsGrammar.PopFromList_T _ ident -> failure x
+  AbsGrammar.AddToList_T _ ident expr1 expr2 -> failure x
+  AbsGrammar.RemoveFromList_T _ ident expr -> failure x
   AbsGrammar.SExp_T _ expr -> failure x
 
 transType :: Show a => AbsGrammar.Type' a -> Result
@@ -75,6 +81,7 @@ transVar x = case x of
 
 transExpr :: Show a => AbsGrammar.Expr' a -> Result
 transExpr x = case x of
+  AbsGrammar.EListElem_T _ ident expr -> failure x
   AbsGrammar.EVar_T _ var -> failure x
   AbsGrammar.ELit_T _ elit -> failure x
   AbsGrammar.App_T _ ident funargs -> failure x

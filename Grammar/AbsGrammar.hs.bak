@@ -31,7 +31,7 @@ data TopDef' a
   deriving (C.Eq, C.Ord, C.Show, C.Read, C.Functor, C.Foldable, C.Traversable)
 
 type Arg = Arg' BNFC'Position
-data Arg' a = Arg_T a (Type' a) Ident
+data Arg' a = Arg_T a (Type' a) Ident | ArgList_T a Ident
   deriving (C.Eq, C.Ord, C.Show, C.Read, C.Functor, C.Foldable, C.Traversable)
 
 type Block = Block' BNFC'Position
@@ -55,6 +55,11 @@ data Stmt' a
     | Yield_T a (Expr' a)
     | DeclGen_T a Ident Ident [FunArg' a]
     | ForGen_T a Ident Ident [FunArg' a] (Block' a)
+    | DeclList_T a Ident [Expr' a]
+    | PushToList_T a Ident (Expr' a)
+    | PopFromList_T a Ident
+    | AddToList_T a Ident (Expr' a) (Expr' a)
+    | RemoveFromList_T a Ident (Expr' a)
     | SExp_T a (Expr' a)
   deriving (C.Eq, C.Ord, C.Show, C.Read, C.Functor, C.Foldable, C.Traversable)
 
@@ -72,7 +77,8 @@ data Var' a = Var_T a Ident
 
 type Expr = Expr' BNFC'Position
 data Expr' a
-    = EVar_T a (Var' a)
+    = EListElem_T a Ident (Expr' a)
+    | EVar_T a (Var' a)
     | ELit_T a (ELit' a)
     | App_T a Ident [FunArg' a]
     | Neg_T a (Expr' a)
@@ -147,6 +153,7 @@ instance HasPosition TopDef where
 instance HasPosition Arg where
   hasPosition = \case
     Arg_T p _ _ -> p
+    ArgList_T p _ -> p
 
 instance HasPosition Block where
   hasPosition = \case
@@ -169,6 +176,11 @@ instance HasPosition Stmt where
     Yield_T p _ -> p
     DeclGen_T p _ _ _ -> p
     ForGen_T p _ _ _ _ -> p
+    DeclList_T p _ _ -> p
+    PushToList_T p _ _ -> p
+    PopFromList_T p _ -> p
+    AddToList_T p _ _ _ -> p
+    RemoveFromList_T p _ _ -> p
     SExp_T p _ -> p
 
 instance HasPosition Type where
@@ -189,6 +201,7 @@ instance HasPosition Var where
 
 instance HasPosition Expr where
   hasPosition = \case
+    EListElem_T p _ _ -> p
     EVar_T p _ -> p
     ELit_T p _ -> p
     App_T p _ _ -> p

@@ -17,7 +17,7 @@ type EnvVar = M.Map Ident Loc
 
 type StoreVar = M.Map Loc (Type, ELit)
 
-type StoreList = M.Map Loc [ELit]
+type StoreList = M.Map Loc (Type, [ELit])
 
 type EnvIter = M.Map Ident Loc
 

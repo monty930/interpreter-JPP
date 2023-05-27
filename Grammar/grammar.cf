@@ -27,7 +27,7 @@ Return_T.       Stmt ::= "return" "(" Expr ")" ;
 Yield_T.        Stmt ::= "yield" "(" Expr ")" ;
 DeclGen_T.      Stmt ::= "gen" Ident "=" Ident "(" [FunArg] ")" ";" ;
 ForGen_T.       Stmt ::= "for" "(" Ident "in" Ident "(" [FunArg] ")" ")" Block ;
-DeclList_T.     Stmt ::= "list" Ident "=" "[" [Expr] "]" ";" ;
+DeclList_T.     Stmt ::= "list" Type Ident "=" "[" [Expr] "]" ";" ;
 PushToList_T.   Stmt ::= Ident ".push" "(" Expr ")" ";" ;
 PopFromList_T.  Stmt ::= Ident ".pop" ";" ;
 AddToList_T.    Stmt ::= Ident ".add" "(" Expr ").(" Expr ")" ";" ;

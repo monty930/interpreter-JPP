@@ -90,7 +90,7 @@ All other symbols are terminals.
   |  |  **|**  | ``yield`` ``(`` //Expr// ``)``
   |  |  **|**  | ``gen`` //Ident// ``=`` //Ident// ``(`` //[FunArg]// ``)`` ``;``
   |  |  **|**  | ``for`` ``(`` //Ident// ``in`` //Ident// ``(`` //[FunArg]// ``)`` ``)`` //Block//
-  |  |  **|**  | ``list`` //Ident// ``=`` ``[`` //[Expr]// ``]`` ``;``
+  |  |  **|**  | ``list`` //Type// //Ident// ``=`` ``[`` //[Expr]// ``]`` ``;``
   |  |  **|**  | //Ident// ``.push`` ``(`` //Expr// ``)`` ``;``
   |  |  **|**  | //Ident// ``.pop`` ``;``
   |  |  **|**  | //Ident// ``.add`` ``(`` //Expr// ``).(`` //Expr// ``)`` ``;``
