@@ -11,7 +11,3 @@ Proc main() {
     DecToBin(x);
     print_line("");
 }
-
-/* expected: 
-    1010
-*/

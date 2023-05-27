@@ -1,6 +1,15 @@
+Glob char a = 'A';
 
+list char l = [a, 'b', (char) 68];
 
 Proc main() {
+    l.push('E');
+    int count = 0;
+    while (count < l.len) {
+        print_line((string) l[count]);
+        count++;
+    }
+
     int i = 0;
     list int l = [i, i + 1, 2 + 2];
     print_line((string) l[0] + " " + (string) l[1] + " " + (string) l[2]);

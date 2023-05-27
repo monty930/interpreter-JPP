@@ -28,7 +28,7 @@ $u = [. \n]          -- universal: any character
 
 -- Symbols and non-identifier-like reserved words
 
-@rsyms = \( | \) | \; | \= | \, | \{ | \} | \+ \+ | \- \- | \[ | \] | \. "push" | \. "pop" | \. "add" | \) \. \( | \. "remove" | \& | \- | \! | \& \& | \| \| | \+ | \* | \/ | \% | \< | \< \= | \> | \> \= | \= \= | \! \=
+@rsyms = \( | \) | \; | \= | \[ | \] | \, | \{ | \} | \+ \+ | \- \- | \. "push" | \. "pop" | \. "add" | \) \. \( | \. "remove" | \. "len" | \& | \- | \! | \& \& | \| \| | \+ | \* | \/ | \% | \< | \< \= | \> | \> \= | \= \= | \! \=
 
 :-
 
@@ -165,7 +165,7 @@ eitherResIdent tv s = treeFind resWords
 -- | The keywords and symbols of the language organized as binary search tree.
 resWords :: BTree
 resWords =
-  b "Gen" 27
+  b ">=" 27
     (b "--" 14
        (b ")" 7
           (b "&" 4
@@ -173,26 +173,26 @@ resWords =
           (b "++" 11
              (b "*" 9 (b ").(" 8 N N) (b "+" 10 N N))
              (b "-" 13 (b "," 12 N N) N)))
-       (b "<" 21
-          (b ".remove" 18
-             (b ".pop" 16 (b ".add" 15 N N) (b ".push" 17 N N))
-             (b ";" 20 (b "/" 19 N N) N))
-          (b "==" 24
-             (b "=" 23 (b "<=" 22 N N) N) (b ">=" 26 (b ">" 25 N N) N))))
-    (b "if" 40
-       (b "char" 34
-          (b "]" 31
-             (b "Proc" 29 (b "Glob" 28 N N) (b "[" 30 N N))
-             (b "break" 33 (b "bool" 32 N N) N))
-          (b "false" 37
-             (b "else" 36 (b "continue" 35 N N) N)
-             (b "gen" 39 (b "for" 38 N N) N)))
-       (b "true" 47
-          (b "next" 44
-             (b "int" 42 (b "in" 41 N N) (b "list" 43 N N))
-             (b "string" 46 (b "return" 45 N N) N))
-          (b "{" 50
-             (b "yield" 49 (b "while" 48 N N) N) (b "}" 52 (b "||" 51 N N) N))))
+       (b ";" 21
+          (b ".push" 18
+             (b ".len" 16 (b ".add" 15 N N) (b ".pop" 17 N N))
+             (b "/" 20 (b ".remove" 19 N N) N))
+          (b "=" 24
+             (b "<=" 23 (b "<" 22 N N) N) (b ">" 26 (b "==" 25 N N) N))))
+    (b "if" 41
+       (b "break" 34
+          (b "[" 31
+             (b "Glob" 29 (b "Gen" 28 N N) (b "Proc" 30 N N))
+             (b "bool" 33 (b "]" 32 N N) N))
+          (b "false" 38
+             (b "continue" 36 (b "char" 35 N N) (b "else" 37 N N))
+             (b "gen" 40 (b "for" 39 N N) N)))
+       (b "true" 48
+          (b "next" 45
+             (b "int" 43 (b "in" 42 N N) (b "list" 44 N N))
+             (b "string" 47 (b "return" 46 N N) N))
+          (b "{" 51
+             (b "yield" 50 (b "while" 49 N N) N) (b "}" 53 (b "||" 52 N N) N))))
   where
   b s n = B bs (TS bs n)
     where

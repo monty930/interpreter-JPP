@@ -382,6 +382,7 @@ evalTopDefs (topdef : topdefs) = do
           let envProc' = M.insert ident (ret, args, emptyBlock, envSt, False) envProc
           let newEnv = (envSt, envProc', envGen)
           local (const newEnv) (evalTopDefs topdefs)
+
     ProcDef_T pos ret ident args block -> do
       (envSt, envProc, envGen) <- ask
       -- check if procedure is already defined
@@ -392,6 +393,7 @@ evalTopDefs (topdef : topdefs) = do
           let envProc' = M.insert ident (ret, args, block, envSt, True) envProc
           let newEnv = (envSt, envProc', envGen)
           local (const newEnv) (evalTopDefs topdefs)
+
     GlobVar_T pos type_ ident expr -> do
       ((envVar, envIter, envList), envProc, envGen) <- ask
       (stVar, stIter, stList) <- get
@@ -408,6 +410,17 @@ evalTopDefs (topdef : topdefs) = do
           local (const newEnv) (evalTopDefs topdefs)
         else do
           makeError "Type mismatch" pos
+
+    ListGlobDecl_T pos type_ ident exprs -> do
+      ((envVar, envIter, envList), envProc, envGen) <- ask
+      (stVar, stIter, stList) <- get
+      let newLoc = getNewLocForList stList
+      list <- listOfExprs pos [] exprs type_
+      put (stVar, stIter, M.insert newLoc (type_, list) stList)
+      let envList' = M.insert ident newLoc envList
+      let newEnv = ((envVar, envIter, envList'), envProc, envGen)
+      local (const newEnv) (evalTopDefs topdefs)
+      
     Gener_T pos type_ ident args block -> do
       (envSt, envProc, envGen) <- ask
       -- check if generator is already defined
@@ -1061,6 +1074,20 @@ evalExpr (EListElem_T pos ident expr) = do
               ret <- getFromList pos list (fromInteger val')
               return (Ret ret)
     _ -> makeError "Wrong operation argument" pos
+
+evalExpr (EListLen_T pos ident) = do
+  ((envVar, envIter, envList), envProc, envGen) <- ask
+  (stVar, stIter, stList) <- get
+  case M.lookup ident envList of
+    Nothing -> makeError "List not in scope" pos
+    Just loc -> do
+      case M.lookup loc stList of
+        Nothing -> makeError "List not in scope" pos
+        Just (type_, list) -> do
+          return (Ret (ELitInt_T pos (toInteger (listLen list))))
+
+listLen :: [ELit] -> Integer
+listLen = foldr (\ x -> (+) 1) 0
 
 getFromList :: BNFC'Position -> [ELit] -> Integer -> RSE ELit
 getFromList pos (x : xs) 0 = return x

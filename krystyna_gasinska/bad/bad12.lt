@@ -9,6 +9,3 @@ Proc main() {
         P("str");
     }
 }
-
-// Expected:
-// Wrong operation argument

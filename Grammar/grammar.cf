@@ -2,6 +2,7 @@
 entrypoints     Program ;
 Program_T.      Program ::= [TopDef] ;
 ProcDecl_T.     TopDef ::= RetVal Ident "(" [Arg] ")" ";" ;
+ListGlobDecl_T. TopDef ::= "list" Type Ident "=" "[" [Expr] "]" ";" ;
 ProcDef_T.      TopDef ::= RetVal Ident "(" [Arg] ")" Block ;
 GlobVar_T.      TopDef ::= "Glob" Type Ident "=" Expr ";" ;
 Gener_T.        TopDef ::= "Gen" Type Ident "(" [Arg] ")" Block ;
@@ -49,6 +50,7 @@ ELitTrue_T.     EBool ::= "true" ;
 ELitFalse_T.    EBool ::= "false" ;
 ELitBool_T.     ELit ::= EBool ;
 ELit_T.         Expr7 ::= ELit ;
+EListLen_T.     Expr7 ::= Ident ".len" ;
 App_T.          Expr7 ::= Ident "(" [FunArg] ")" ;
 AsValue_T.      FunArg ::= Expr ;
 AsRef_T.        FunArg ::= "&" Var ;

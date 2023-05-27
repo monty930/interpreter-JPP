@@ -4,7 +4,3 @@ Proc main() {
     x = 13;
     print_line((string) x);
 }
-
-// Expected: 
-// True
-// Type mismatch (in 4nd line)

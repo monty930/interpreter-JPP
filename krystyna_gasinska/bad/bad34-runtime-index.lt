@@ -1,0 +1,5 @@
+Proc main() {
+    list int l = [1,2,3];
+    print_line("length: " + (string) l.len);
+    l[3];
+}

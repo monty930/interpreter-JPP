@@ -14,9 +14,3 @@ Proc main() {
     bool x = true;
     abs(x);
 }
-
-/* expected: 
-    3
-    4
-    Wrong argument type
-*/

@@ -147,6 +147,7 @@ instance Print (AbsGrammar.Program' a) where
 instance Print (AbsGrammar.TopDef' a) where
   prt i = \case
     AbsGrammar.ProcDecl_T _ retval id_ args -> prPrec i 0 (concatD [prt 0 retval, prt 0 id_, doc (showString "("), prt 0 args, doc (showString ")"), doc (showString ";")])
+    AbsGrammar.ListGlobDecl_T _ type_ id_ exprs -> prPrec i 0 (concatD [doc (showString "list"), prt 0 type_, prt 0 id_, doc (showString "="), doc (showString "["), prt 0 exprs, doc (showString "]"), doc (showString ";")])
     AbsGrammar.ProcDef_T _ retval id_ args block -> prPrec i 0 (concatD [prt 0 retval, prt 0 id_, doc (showString "("), prt 0 args, doc (showString ")"), prt 0 block])
     AbsGrammar.GlobVar_T _ type_ id_ expr -> prPrec i 0 (concatD [doc (showString "Glob"), prt 0 type_, prt 0 id_, doc (showString "="), prt 0 expr, doc (showString ";")])
     AbsGrammar.Gener_T _ type_ id_ args block -> prPrec i 0 (concatD [doc (showString "Gen"), prt 0 type_, prt 0 id_, doc (showString "("), prt 0 args, doc (showString ")"), prt 0 block])
@@ -218,6 +219,7 @@ instance Print (AbsGrammar.Expr' a) where
     AbsGrammar.EListElem_T _ id_ expr -> prPrec i 7 (concatD [prt 0 id_, doc (showString "["), prt 0 expr, doc (showString "]")])
     AbsGrammar.EVar_T _ var -> prPrec i 7 (concatD [prt 0 var])
     AbsGrammar.ELit_T _ elit -> prPrec i 7 (concatD [prt 0 elit])
+    AbsGrammar.EListLen_T _ id_ -> prPrec i 7 (concatD [prt 0 id_, doc (showString ".len")])
     AbsGrammar.App_T _ id_ funargs -> prPrec i 7 (concatD [prt 0 id_, doc (showString "("), prt 0 funargs, doc (showString ")")])
     AbsGrammar.Neg_T _ expr -> prPrec i 6 (concatD [doc (showString "-"), prt 7 expr])
     AbsGrammar.Not_T _ expr -> prPrec i 6 (concatD [doc (showString "!"), prt 7 expr])

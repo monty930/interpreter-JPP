@@ -5,5 +5,3 @@ Proc P(int x, char y) {
 Proc main() {
     P(1);
 }
-
-// Expected: wrong number of arguments

@@ -4,7 +4,3 @@ Proc main() {
     else
         { print_line("false"); }
 }
-
-/* expected: 
-    True
-*/

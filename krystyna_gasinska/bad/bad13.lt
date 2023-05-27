@@ -5,7 +5,3 @@ Proc main() {
     x = (char) 1114112;
     print_line((string) x);
 }
-
-// Expected:
-// C
-// Integer too big to convert

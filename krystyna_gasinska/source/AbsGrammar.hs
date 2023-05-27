@@ -25,6 +25,7 @@ data Program' a = Program_T a [TopDef' a]
 type TopDef = TopDef' BNFC'Position
 data TopDef' a
     = ProcDecl_T a (RetVal' a) Ident [Arg' a]
+    | ListGlobDecl_T a (Type' a) Ident [Expr' a]
     | ProcDef_T a (RetVal' a) Ident [Arg' a] (Block' a)
     | GlobVar_T a (Type' a) Ident (Expr' a)
     | Gener_T a (Type' a) Ident [Arg' a] (Block' a)
@@ -80,6 +81,7 @@ data Expr' a
     = EListElem_T a Ident (Expr' a)
     | EVar_T a (Var' a)
     | ELit_T a (ELit' a)
+    | EListLen_T a Ident
     | App_T a Ident [FunArg' a]
     | Neg_T a (Expr' a)
     | Not_T a (Expr' a)
@@ -146,6 +148,7 @@ instance HasPosition Program where
 instance HasPosition TopDef where
   hasPosition = \case
     ProcDecl_T p _ _ _ -> p
+    ListGlobDecl_T p _ _ _ -> p
     ProcDef_T p _ _ _ _ -> p
     GlobVar_T p _ _ _ -> p
     Gener_T p _ _ _ _ -> p
@@ -204,6 +207,7 @@ instance HasPosition Expr where
     EListElem_T p _ _ -> p
     EVar_T p _ -> p
     ELit_T p _ -> p
+    EListLen_T p _ -> p
     App_T p _ _ -> p
     Neg_T p _ -> p
     Not_T p _ -> p

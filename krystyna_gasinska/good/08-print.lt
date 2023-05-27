@@ -5,9 +5,3 @@ Proc main () {
     char c = '\n';
     print ((string) c);
 }
-
-/*
-expected result:
-d22
-Hello world
-*/

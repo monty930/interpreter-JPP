@@ -80,6 +80,22 @@ checkTopDefs (topdef : topdefs) = do
             envG <- checkGener pos type_ ident args block
             local (const ((envVar, envIter, envList), envProc, envG)) (checkTopDefs topdefs)
 
+        ListGlobDecl_T pos type_ ident exprs -> do
+            ((envVar, envIter, envList), envProc, envGen) <- ask
+            envL <- checkListGlobDecl pos type_ ident exprs
+            local (const ((envVar, envIter, envL), envProc, envGen)) (checkTopDefs topdefs)
+
+checkListGlobDecl :: BNFC'Position -> Type -> Ident -> [Expr] -> RSET EnvListT
+checkListGlobDecl pos type_ ident exprs = do
+    ((envVar, envIter, envList), envProc, envGen) <- ask
+    (storeVar, storeIter, stList) <- get
+    let type_' = toTypeT type_
+    let loc = getNewLocT storeVar
+    let envList' = M.insert ident loc envList
+    put (storeVar, storeIter, M.insert loc type_' stList)
+    checkExprs pos exprs type_
+    return envList'
+
 checkGener :: BNFC'Position -> Type -> Ident -> [Arg] -> Block -> RSET EnvGenT
 checkGener pos type_ ident args block = do
     ((envVar, envIter, envList), envProc, envGen) <- ask
@@ -693,6 +709,18 @@ checkExpr (EListElem_T pos ident expr) = do
                 if "int" == stringTypeOfType typeExpr'
                     then return type_
                     else makeTypeError "Index type mismatch" pos
+
+checkExpr (EListLen_T pos ident) = do
+    ((envVar, envIter, envList), envProc, envGen) <- ask
+    (storeVar, storeIter, stList) <- get
+    case M.lookup ident envList of 
+        Nothing -> do
+            makeTypeError ("Variable " ++ getIdentString ident ++ " undefined") pos
+        Just loc -> case M.lookup loc stList of
+            Nothing -> do
+                makeTypeError ("Variable " ++ getIdentString ident ++ " undefined") pos
+            Just type_ -> 
+                return IntT
 
 checkArgs :: BNFC'Position -> [FunArg] -> [TypeT] -> RSET ()
 checkArgs pos [] [] = return ()

@@ -147,7 +147,7 @@ Stmt
   | 'yield' '(' Expr ')' { (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1), AbsGrammar.Yield_T (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1)) (snd $3)) }
   | 'gen' Ident '=' Ident '(' ListFunArg ')' ';' { (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1), AbsGrammar.DeclGen_T (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1)) (snd $2) (snd $4) (snd $6)) }
   | 'for' '(' Ident 'in' Ident '(' ListFunArg ')' ')' Block { (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1), AbsGrammar.ForGen_T (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1)) (snd $3) (snd $5) (snd $7) (snd $10)) }
-  | 'list' Ident '=' '[' ListExpr ']' ';' { (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1), AbsGrammar.DeclList_T (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1)) (snd $2) (snd $5)) }
+  | 'list' Type Ident '=' '[' ListExpr ']' ';' { (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1), AbsGrammar.DeclList_T (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1)) (snd $2) (snd $3) (snd $6)) }
   | Ident '.push' '(' Expr ')' ';' { (fst $1, AbsGrammar.PushToList_T (fst $1) (snd $1) (snd $4)) }
   | Ident '.pop' ';' { (fst $1, AbsGrammar.PopFromList_T (fst $1) (snd $1)) }
   | Ident '.add' '(' Expr ').(' Expr ')' ';' { (fst $1, AbsGrammar.AddToList_T (fst $1) (snd $1) (snd $4) (snd $6)) }
