@@ -32,13 +32,15 @@ type EnvVarIterT = (EnvVarT, EnvIterT)
 
 type EnvT = (EnvVarIterT, EnvProcT, EnvGenT)
 
-type RSET a = ReaderT EnvT (StateT StoreVarT (ExceptT String IO)) a
+type StoreT = (StoreVarT, StoreIterT)
+
+type RSET a = ReaderT EnvT (StateT StoreT (ExceptT String IO)) a
 
 initEnv :: EnvT
 initEnv = ((M.empty, M.empty), M.empty, M.empty)
 
-initStore :: StoreVarT
-initStore = M.empty
+initStore :: StoreT
+initStore = (M.empty, M.empty)
 
 typeChecker :: Program -> IO ()
 typeChecker program = do
@@ -74,9 +76,15 @@ checkGener pos type_ ident args block = do
     (envVar', argTypes) <- insertArgsToEnvProc pos (envVar, []) args
     let type_' = toTypeT type_
     let envGen' = M.insert ident (type_', argTypes) envGen
-    let ret_type = typeTToBlockRetType type_'
+    let ret_type = typeTToBlockYieldType type_'
     local (const ((envVar', envIter), envProc, envGen')) (checkBlock ret_type block)
     return envGen'
+
+typeTToBlockYieldType :: TypeT -> BlockRetType
+typeTToBlockYieldType type_ = 
+    case type_ of
+        VoidT -> NoRetType
+        type_' -> YieldType (getValType type_)
 
 retValToTypeT :: RetVal -> TypeT
 retValToTypeT retval = case retval of
@@ -103,12 +111,12 @@ insertArgsToEnvProc :: BNFC'Position -> (EnvVarT, [TypeT]) -> [Arg] -> RSET (Env
 insertArgsToEnvProc pos envVar [] = return envVar
 
 insertArgsToEnvProc pos (envVar, argTypes) (arg : args) = do
-    storeVar <- get
+    (storeVar, storeIter) <- get
     let type_ = toTypeT (typeOfArg arg)
     let ident = getArgIdent arg
     let loc = getNewLocT storeVar
     let envVar' = M.insert ident loc envVar
-    put (M.insert loc type_ storeVar)
+    put (M.insert loc type_ storeVar, storeIter)
     insertArgsToEnvProc pos (envVar', argTypes ++ [type_]) args
 
 checkBlock :: BlockRetType -> Block -> RSET ()
@@ -123,9 +131,25 @@ checkStmts ret_type (stmt : stmts) = do
         Decl_T pos type_ ident expr -> do 
             env <- checkDecl pos type_ ident expr
             local (const env) (checkStmts ret_type stmts)
+        DeclGen_T pos ident1 ident2 args -> do 
+            env <- checkDeclIter pos ident1 ident2 args
+            local (const env) (checkStmts ret_type stmts)
         _no_decl -> do
             checkStmt ret_type stmt
             checkStmts ret_type stmts
+
+checkDeclIter :: BNFC'Position -> Ident -> Ident -> [FunArg] -> RSET EnvT
+checkDeclIter pos ident1 ident2 args = do
+    ((envVar, envIter), envProc, envGen) <- ask
+    (srVar, stIter) <- get
+    let loc = getNewLocIterT stIter
+    let envIter' = M.insert ident1 loc envIter
+    case M.lookup ident2 envGen of
+        Nothing -> throwError ("Generator " ++ show ident2 ++ " not found")
+        Just (type_, argTypes) -> do
+            checkArgs pos args argTypes
+            put (srVar, M.insert loc type_ stIter)
+            return ((envVar, envIter'), envProc, envGen)
 
 getNewLocT :: StoreVarT -> Loc
 getNewLocT stVar =
@@ -133,17 +157,23 @@ getNewLocT stVar =
     [] -> 0
     keys -> maximum keys + 1
 
+getNewLocIterT :: StoreIterT -> Loc
+getNewLocIterT stIter =
+  case M.keys stIter of
+    [] -> 0
+    keys -> maximum keys + 1
+
 checkDecl :: BNFC'Position -> Type -> Ident -> Expr -> RSET EnvT
 checkDecl pos type_ ident expr = do
     ((envVar, envIter), envProc, envGen) <- ask
-    storeVar <- get
+    (storeVar, storeIter) <- get
     typeExpr <- checkExpr expr
     let typeExpr' = getValType typeExpr
     if stringTypeOfType type_ == stringTypeOfType typeExpr'
         then do
             let loc = getNewLocT storeVar
             let envVar' = M.insert ident loc envVar
-            put (M.insert loc (toTypeT type_) storeVar)
+            put (M.insert loc (toTypeT type_) storeVar, storeIter)
             return ((envVar', envIter), envProc, envGen)
         else makeTypeError 
             ("Variable " ++ 
@@ -164,7 +194,7 @@ checkStmt ret_type (Decl_T pos type_ ident expr) = undefined -- intended
 
 checkStmt ret_type (Ass_T pos ident expr) = do 
     ((envVar, envIter), envProc, envGen) <- ask
-    storeVar <- get
+    (storeVar, _storeIter) <- get
     typeExpr <- checkExpr expr
     let typeExpr' = getValType typeExpr
     case M.lookup ident envVar of 
@@ -282,7 +312,7 @@ blockRetToTypeYield pos _ = makeTypeError "Return in generator" pos
 checkIncrDecr :: BNFC'Position -> Ident -> RSET ()
 checkIncrDecr pos ident = do
     ((envVar, _envIter), _envProc, _envGen) <- ask
-    storeVar <- get
+    (storeVar, _storeIter) <- get
     case M.lookup ident envVar of 
         Nothing -> do 
             makeTypeError ("Variable " ++ show ident ++ " undefined") pos
@@ -304,14 +334,14 @@ checkIncrDecr pos ident = do
 checkGlobVar :: BNFC'Position -> Type -> Ident -> Expr -> RSET EnvT
 checkGlobVar pos type_ ident expr = do
     ((envVar, envIter), envProc, envGen) <- ask
-    storeVar <- get
+    (storeVar, storeIter) <- get
     typeExpr <- checkExpr expr
     let typeExpr' = getValType typeExpr
     if stringTypeOfType type_ == stringTypeOfType typeExpr'
         then do
             let loc = getNewLocT storeVar
             let envVar' = M.insert ident loc envVar
-            put (M.insert loc (toTypeT type_) storeVar)
+            put (M.insert loc (toTypeT type_) storeVar, storeIter)
             return ((envVar', envIter), envProc, envGen)
         else makeTypeError 
             ("Variable " ++ 
@@ -340,7 +370,7 @@ getValType type_ = case type_ of
 checkExpr :: Expr -> RSET TypeT
 checkExpr (EVar_T pos var) = do
     ((envVar, _envIter), _envProc, _envGen) <- ask
-    storeVar <- get
+    (storeVar, _storeIter) <- get
     let ident = getVarIdent var
     case M.lookup ident envVar of
         Just loc -> do
@@ -466,7 +496,14 @@ checkExpr (ECast_T pos type_ expr) = do
         _ -> makeTypeError ("Cannot cast " ++ stringTypeOfType typeExpr' ++ " to " ++ stringTypeOfType type_) pos
 
 checkExpr (EGenNext_T pos ident) = do 
-    return VoidT
+    ((envVar, envIter), envProc, envGen) <- ask
+    (stVar, stIter) <- get
+    case M.lookup ident envIter of
+        Nothing -> makeTypeError ("Generator " ++ getIdentString ident ++ " not declared") pos
+        Just loc -> do 
+            case M.lookup loc stIter of
+                Nothing -> makeTypeError ("Generator " ++ getIdentString ident ++ " not defined") pos
+                Just type_ -> return type_
 
 checkExpr (App_T pos ident funargs) = do 
     ((envVar, envIter), envProc, envGen) <- ask
@@ -504,7 +541,7 @@ checkArgs pos (farg : fargs) (argT : argsT) = do
         AsRef_T pos var -> do 
             let ident = getVarIdent var
             ((envVar, envIter), envProc, envGen) <- ask
-            storeVar <- get
+            (storeVar, storeIter) <- get
             case M.lookup ident envVar of
                 Nothing -> makeTypeError (
                     "Variable " ++
