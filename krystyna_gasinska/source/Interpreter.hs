@@ -192,41 +192,41 @@ evalGenState ret_type (ReturnToEnv e : stmts) = do
   let newEnv = (e, envProc, envGen)
   local (const newEnv) (evalGenState ret_type stmts)
 
-evalGenState ret_type (GenStateStmt (PushToList_T pos ident expr) : stmts) = do 
+evalGenState ret_type (GenStateStmt (PushToList_T pos ident expr) : stmts) = do
   ((envVar, envIter, envList), envProc, envGen) <- ask
   (stVar, stIter, stList) <- get
   retFromExpr <- evalExpr expr
   val <- getValFromExpr retFromExpr
-  case M.lookup ident envList of 
+  case M.lookup ident envList of
     Nothing -> makeError "List variable not in scope" pos
-    Just loc -> do 
-      case M.lookup loc stList of 
+    Just loc -> do
+      case M.lookup loc stList of
         Nothing -> makeError "List variable not in scope" pos
-        Just (type_, list) -> do 
+        Just (type_, list) -> do
           if stringTypeOfType type_ == stringTypeOfElit val
-            then do 
+            then do
               let newList = list ++ [val]
               put (stVar, stIter, M.insert loc (type_, newList) stList)
               evalGenState ret_type stmts
             else makeError "Type mismatch" pos
 
-evalGenState ret_type (GenStateStmt (PopFromList_T pos ident) : stmts) = do 
+evalGenState ret_type (GenStateStmt (PopFromList_T pos ident) : stmts) = do
   ((envVar, envIter, envList), envProc, envGen) <- ask
   (stVar, stIter, stList) <- get
-  case M.lookup ident envList of 
+  case M.lookup ident envList of
     Nothing -> makeError "List variable not in scope" pos
-    Just loc -> do 
-      case M.lookup loc stList of 
+    Just loc -> do
+      case M.lookup loc stList of
         Nothing -> makeError "List variable not in scope" pos
-        Just (type_, list) -> do 
-          if null list 
+        Just (type_, list) -> do
+          if null list
             then makeError "Empty list" pos
-            else do 
+            else do
               let newList = init list
               put (stVar, stIter, M.insert loc (type_, newList) stList)
               evalGenState ret_type stmts
 
-evalGenState ret_type (GenStateStmt (AddToList_T pos ident expr1 expr2) : stmts) = do 
+evalGenState ret_type (GenStateStmt (AddToList_T pos ident expr1 expr2) : stmts) = do
   ((envVar, envIter, envList), envProc, envGen) <- ask
   (stVar, stIter, stList) <- get
   retFromExpr1 <- evalExpr expr1
@@ -234,31 +234,31 @@ evalGenState ret_type (GenStateStmt (AddToList_T pos ident expr1 expr2) : stmts)
   id <- getIntegerFromId pos elitID
   retFromExpr2 <- evalExpr expr2
   val <- getValFromExpr retFromExpr2
-  case M.lookup ident envList of 
+  case M.lookup ident envList of
     Nothing -> makeError "List variable not in scope" pos
-    Just loc -> do 
-      case M.lookup loc stList of 
+    Just loc -> do
+      case M.lookup loc stList of
         Nothing -> makeError "List variable not in scope" pos
-        Just (type_, list) -> do 
+        Just (type_, list) -> do
           if stringTypeOfType type_ == stringTypeOfElit val
-            then do 
-              let newList = putInList list id val
+            then do
+              newList <- putInList pos list id val
               put (stVar, stIter, M.insert loc (type_, newList) stList)
               evalGenState ret_type stmts
             else makeError "Type mismatch" pos
 
-evalGenState ret_type (GenStateStmt (RemoveFromList_T pos ident expr) : stmts) = do 
+evalGenState ret_type (GenStateStmt (RemoveFromList_T pos ident expr) : stmts) = do
   ((envVar, envIter, envList), envProc, envGen) <- ask
   (stVar, stIter, stList) <- get
   retFromExpr <- evalExpr expr
   idElit <- getValFromExpr retFromExpr
   id <- getIntegerFromId pos idElit
-  case M.lookup ident envList of 
+  case M.lookup ident envList of
     Nothing -> makeError "List variable not in scope" pos
-    Just loc -> do 
-      case M.lookup loc stList of 
+    Just loc -> do
+      case M.lookup loc stList of
         Nothing -> makeError "List variable not in scope" pos
-        Just (type_, list) -> do 
+        Just (type_, list) -> do
           let newList = removeFromList list id
           put (stVar, stIter, M.insert loc (type_, newList) stList)
           evalGenState ret_type stmts
@@ -276,7 +276,7 @@ evalGenState ret_type (GenStateStmt (DeclList_T pos type_ ident exprs) : stmts) 
 listOfExprs :: BNFC'Position -> [ELit] -> [Expr] -> Type -> RSE [ELit]
 listOfExprs pos acc [] type_ = return acc
 
-listOfExprs pos acc (ex : exs) type_ = do 
+listOfExprs pos acc (ex : exs) type_ = do
   retFromExpr <- evalExpr ex
   val <- getValFromExpr retFromExpr
   if stringTypeOfType type_ == stringTypeOfElit val
@@ -294,10 +294,11 @@ getIntegerFromId :: BNFC'Position -> ELit -> RSE Integer
 getIntegerFromId _ (ELitInt_T _ int) = return int
 getIntegerFromId pos _ = makeError "Wrong type" BNFC'NoPosition
 
-putInList :: [ELit] -> Integer -> ELit -> [ELit]
-putInList list id val = do
+putInList :: BNFC'Position -> [ELit] -> Integer -> ELit -> RSE [ELit]
+putInList pos list id val = do
+  valAtId <- getFromList pos list id
   let (before, after) = splitAt (fromIntegral id) list
-  before ++ [val] ++ tail after
+  return (before ++ [val] ++ [valAtId] ++ tail after)
 
 removeRestOfBlockFromStack :: BNFC'Position -> GenState -> GenState
 removeRestOfBlockFromStack pos stmts@(ReturnToEnv e : GenStateStmt While_T {} : _) = stmts
@@ -748,15 +749,73 @@ evalStmt ret_type (Continue_T pos) = do
 
 evalStmt ret_type DeclList_T {} = undefined -- intended
 
-evalStmt ret_type (PushToList_T pos ident expr) = do 
+evalStmt ret_type (PushToList_T pos ident expr) = do
   ((envVar, envIter, envList), envProc, envGen) <- ask
   (stVar, stIter, stList) <- get
   retFromExpr <- evalExpr expr
-  return NoRet
+  val <- getValFromExpr retFromExpr
+  case M.lookup ident envList of
+    Nothing -> makeError "List variable not in scope" pos
+    Just loc -> do
+      case M.lookup loc stList of
+        Nothing -> makeError "List variable not in scope" pos
+        Just (type_, list) -> do
+          if stringTypeOfType type_ == stringTypeOfElit val
+            then do
+              let newList = list ++ [val]
+              put (stVar, stIter, M.insert loc (type_, newList) stList)
+              return NoRet
+            else makeError "Type mismatch" pos
 
-evalStmt _ _ = do 
-  liftIO $ putStrLn "TODO UNDEFINED"
-  undefined
+evalStmt ret_type (PopFromList_T pos ident) = do
+  ((envVar, envIter, envList), envProc, envGen) <- ask
+  (stVar, stIter, stList) <- get
+  case M.lookup ident envList of
+    Nothing -> makeError "List variable not in scope" pos
+    Just loc -> do
+      case M.lookup loc stList of
+        Nothing -> makeError "List variable not in scope" pos
+        Just (type_, list) -> do
+          if not (null list)
+            then do
+              let newList = init list
+              put (stVar, stIter, M.insert loc (type_, newList) stList)
+              return NoRet
+            else makeError "List is empty" pos
+
+evalStmt ret_type (RemoveFromList_T pos ident expr) = do
+  ((envVar, envIter, envList), envProc, envGen) <- ask
+  (stVar, stIter, stList) <- get
+  retFromExpr <- evalExpr expr
+  idElit <- getValFromExpr retFromExpr
+  id <- getIntegerFromId pos idElit
+  case M.lookup ident envList of
+    Nothing -> makeError "List variable not in scope" pos
+    Just loc -> do
+      case M.lookup loc stList of
+        Nothing -> makeError "List variable not in scope" pos
+        Just (type_, list) -> do
+          let newList = removeFromList list id
+          put (stVar, stIter, M.insert loc (type_, newList) stList)
+          return NoRet
+
+evalStmt ret_type (AddToList_T pos ident expr1 expr2) = do
+  ((envVar, envIter, envList), envProc, envGen) <- ask
+  (stVar, stIter, stList) <- get
+  retFromExpr1 <- evalExpr expr1
+  idElit <- getValFromExpr retFromExpr1
+  id <- getIntegerFromId pos idElit
+  retFromExpr2 <- evalExpr expr2
+  val <- getValFromExpr retFromExpr2
+  case M.lookup ident envList of
+    Nothing -> makeError "List variable not in scope" pos
+    Just loc -> do
+      case M.lookup loc stList of
+        Nothing -> makeError "List variable not in scope" pos
+        Just (type_, list) -> do
+          newList <- putInList pos list id val
+          put (stVar, stIter, M.insert loc (type_, newList) stList)
+          return NoRet
 
 blockRetToElit :: BlockReturn -> ELit
 blockRetToElit (Yield val) = val
@@ -986,25 +1045,25 @@ evalExpr (EGenNext_T pos ident) = do
     Ret _ -> makeError "Unexpected return" pos
     _ -> undefined -- intended
 
-evalExpr (EListElem_T pos ident expr) = do 
+evalExpr (EListElem_T pos ident expr) = do
   retFromExpr <- evalExpr expr
   val <- getValFromExpr retFromExpr
-  case val of 
-    ELitInt_T pos val' -> do 
+  case val of
+    ELitInt_T pos val' -> do
       ((envVar, envIter, envList), envProc, envGen) <- ask
       (stVar, stIter, stList) <- get
-      case M.lookup ident envList of 
+      case M.lookup ident envList of
         Nothing -> makeError "List not in scope" pos
-        Just loc -> do 
-          case M.lookup loc stList of 
+        Just loc -> do
+          case M.lookup loc stList of
             Nothing -> makeError "List not in scope" pos
-            Just (type_, list) -> do 
+            Just (type_, list) -> do
               ret <- getFromList pos list (fromInteger val')
               return (Ret ret)
     _ -> makeError "Wrong operation argument" pos
 
 getFromList :: BNFC'Position -> [ELit] -> Integer -> RSE ELit
-getFromList pos (x : xs) 0 = return x 
+getFromList pos (x : xs) 0 = return x
 getFromList pos (x : xs) n = getFromList pos xs (n - 1)
 getFromList pos [] _ = makeError "Index out of bounds" pos
 

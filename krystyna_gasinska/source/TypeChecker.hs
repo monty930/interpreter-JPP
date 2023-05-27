@@ -14,15 +14,16 @@ import Control.Monad.Reader
 import Control.Monad.State
 import Control.Monad.Except
 
-data TypePlainT = IntPlainT | CharPlainT | StrPlainT | BoolPlainT
-    deriving (Show, Eq)
-
-data TypeT = IntT | CharT | StrT | BoolT | VoidT | TabT TypePlainT
+data TypeT = IntT | CharT | StrT | BoolT | VoidT
     deriving (Show, Eq)
 
 type EnvVarT = M.Map Ident Loc
 
 type StoreVarT = M.Map Loc TypeT
+
+type StoreListT = M.Map Loc TypeT
+
+type EnvListT = M.Map Ident Loc
 
 type StoreIterT = M.Map Loc TypeT
 
@@ -32,19 +33,19 @@ type EnvProcT = M.Map Ident (TypeT, [TypeT], Bool)
 
 type EnvGenT = M.Map Ident (TypeT, [TypeT])
 
-type EnvVarIterT = (EnvVarT, EnvIterT)
+type EnvStT = (EnvVarT, EnvIterT, EnvListT)
 
-type EnvT = (EnvVarIterT, EnvProcT, EnvGenT)
+type EnvT = (EnvStT, EnvProcT, EnvGenT)
 
-type StoreT = (StoreVarT, StoreIterT)
+type StoreT = (StoreVarT, StoreIterT, StoreListT)
 
 type RSET a = ReaderT EnvT (StateT StoreT (ExceptT String IO)) a
 
 initEnv :: EnvT
-initEnv = ((M.empty, M.empty), M.empty, M.empty)
+initEnv = ((M.empty, M.empty, M.empty), M.empty, M.empty)
 
 initStore :: StoreT
-initStore = (M.empty, M.empty)
+initStore = (M.empty, M.empty, M.empty)
 
 typeChecker :: Program -> IO ()
 typeChecker program = do
@@ -61,39 +62,39 @@ checkTopDefs [] = return ()
 checkTopDefs (topdef : topdefs) = do
     case topdef of
         ProcDecl_T pos retval ident args -> do
-            ((envVar, envIter), envProc, envGen) <- ask
+            ((envVar, envIter, envList), envProc, envGen) <- ask
             envP <- checkProcDecl pos retval ident args
-            local (const ((envVar, envIter), envP, envGen)) (checkTopDefs topdefs)
+            local (const ((envVar, envIter, envList), envP, envGen)) (checkTopDefs topdefs)
 
         ProcDef_T pos retval ident args block -> do
-            ((envVar, envIter), envProc, envGen) <- ask
+            ((envVar, envIter, envList), envProc, envGen) <- ask
             envP <- checkProcDef pos retval ident args block
-            local (const ((envVar, envIter), envP, envGen)) (checkTopDefs topdefs)
+            local (const ((envVar, envIter, envList), envP, envGen)) (checkTopDefs topdefs)
 
         GlobVar_T pos type_ ident expr -> do
             env <- checkGlobVar pos type_ ident expr
             local (const env) (checkTopDefs topdefs)
 
         Gener_T pos type_ ident args block -> do
-            ((envVar, envIter), envProc, envGen) <- ask
+            ((envVar, envIter, envList), envProc, envGen) <- ask
             envG <- checkGener pos type_ ident args block
-            local (const ((envVar, envIter), envProc, envG)) (checkTopDefs topdefs)
+            local (const ((envVar, envIter, envList), envProc, envG)) (checkTopDefs topdefs)
 
 checkGener :: BNFC'Position -> Type -> Ident -> [Arg] -> Block -> RSET EnvGenT
 checkGener pos type_ ident args block = do
-    ((envVar, envIter), envProc, envGen) <- ask
+    ((envVar, envIter, envList), envProc, envGen) <- ask
     (envVar', argTypes) <- insertArgsToEnvProc pos (envVar, []) args
     let type_' = toTypeT type_
     let envGen' = M.insert ident (type_', argTypes) envGen
     let ret_type = typeTToBlockYieldType type_'
-    local (const ((envVar', envIter), envProc, envGen')) (checkBlock ret_type False block)
+    local (const ((envVar', envIter, envList), envProc, envGen')) (checkBlock ret_type False block)
     return envGen'
 
 typeTToBlockYieldType :: TypeT -> BlockRetType
 typeTToBlockYieldType type_ =
     case type_ of
         VoidT -> NoRetType
-        type_' -> YieldType (getValType type_)
+        type_' -> YieldType (typeTToType type_)
 
 retValToTypeT :: RetVal -> TypeT
 retValToTypeT retval = case retval of
@@ -102,7 +103,7 @@ retValToTypeT retval = case retval of
 
 checkProcDef :: BNFC'Position -> RetVal -> Ident -> [Arg] -> Block -> RSET EnvProcT
 checkProcDef pos retval ident args block = do
-    ((envVar, envIter), envProc, envGen) <- ask
+    ((envVar, envIter, envList), envProc, envGen) <- ask
     (envVar', argTypes) <- insertArgsToEnvProc pos (envVar, []) args
     let type_ = retValToTypeT retval
     case M.lookup ident envProc of
@@ -111,7 +112,7 @@ checkProcDef pos retval ident args block = do
                 then do
                     let envProc' = M.insert ident (type_', argTypes', True) envProc
                     let ret_type = typeTToBlockRetType type_'
-                    local (const ((envVar', envIter), envProc', envGen)) (checkBlock ret_type False block)
+                    local (const ((envVar', envIter, envList), envProc', envGen)) (checkBlock ret_type False block)
                     return envProc'
                 else do
                     makeTypeError ("Procedure " ++ getIdentString ident ++ " is already defined with different type or arguments.") pos
@@ -120,12 +121,12 @@ checkProcDef pos retval ident args block = do
         _ -> do
             let envProc' = M.insert ident (type_, argTypes, True) envProc
             let ret_type = typeTToBlockRetType type_
-            local (const ((envVar', envIter), envProc', envGen)) (checkBlock ret_type False block)
+            local (const ((envVar', envIter, envList), envProc', envGen)) (checkBlock ret_type False block)
             return envProc'
 
 checkProcDecl :: BNFC'Position -> RetVal -> Ident -> [Arg] -> RSET EnvProcT
 checkProcDecl pos retval ident args = do
-    ((envVar, envIter), envProc, envGen) <- ask
+    ((envVar, envIter, envList), envProc, envGen) <- ask
     (envVar', argTypes) <- insertArgsToEnvProc pos (envVar, []) args
     let type_ = retValToTypeT retval
     case M.lookup ident envProc of
@@ -146,18 +147,18 @@ typeTToBlockRetType :: TypeT -> BlockRetType
 typeTToBlockRetType type_ =
     case type_ of
         VoidT -> NoRetType
-        type_' -> RetType (getValType type_)
+        type_' -> RetType (typeTToType type_)
 
 insertArgsToEnvProc :: BNFC'Position -> (EnvVarT, [TypeT]) -> [Arg] -> RSET (EnvVarT, [TypeT])
 insertArgsToEnvProc pos envVar [] = return envVar
 
 insertArgsToEnvProc pos (envVar, argTypes) (arg : args) = do
-    (storeVar, storeIter) <- get
+    (storeVar, storeIter, stList) <- get
     let type_ = toTypeT (typeOfArg arg)
     let ident = getArgIdent arg
     let loc = getNewLocT storeVar
     let envVar' = M.insert ident loc envVar
-    put (M.insert loc type_ storeVar, storeIter)
+    put (M.insert loc type_ storeVar, storeIter, stList)
     insertArgsToEnvProc pos (envVar', argTypes ++ [type_]) args
 
 checkBlock :: BlockRetType -> Bool -> Block -> RSET ()
@@ -184,28 +185,20 @@ checkStmts ret_type can_break (stmt : stmts) = do
 
 checkDeclList :: BNFC'Position -> Type -> Ident -> [Expr] -> RSET EnvT
 checkDeclList pos type_ ident exprs = do
-    ((envVar, envIter), envProc, envGen) <- ask
-    (storeVar, storeIter) <- get
+    ((envVar, envIter, envList), envProc, envGen) <- ask
+    (storeVar, storeIter, stList) <- get
     let type_' = toTypeT type_
     let loc = getNewLocT storeVar
-    let envVar' = M.insert ident loc envVar
-    let t = typeToTab type_
-    put (M.insert loc t storeVar, storeIter)
-    local (const ((envVar', envIter), envProc, envGen)) (checkExprs pos exprs type_)
-    return ((envVar', envIter), envProc, envGen)
-
-typeToTab :: Type -> TypeT
-typeToTab type_ = case type_ of
-    Int_T _ -> TabT IntPlainT
-    CharT_T _ -> TabT CharPlainT
-    Str_T _ -> TabT StrPlainT
-    Bool_T _ -> TabT BoolPlainT
+    let envList' = M.insert ident loc envList
+    put (storeVar, storeIter, M.insert loc type_' stList)
+    checkExprs pos exprs type_
+    return ((envVar, envIter, envList'), envProc, envGen)
 
 checkExprs :: BNFC'Position -> [Expr] -> Type -> RSET ()
 checkExprs pos [] _type_ = return ()
 checkExprs pos (ex : exs) type_ = do
     t <- checkExpr ex
-    let t' = getValType t
+    let t' = typeTToType t
     if stringTypeOfType t' == stringTypeOfType type_
         then checkExprs pos exs type_
         else makeTypeError
@@ -217,16 +210,16 @@ checkExprs pos (ex : exs) type_ = do
 
 checkDeclIter :: BNFC'Position -> Ident -> Ident -> [FunArg] -> RSET EnvT
 checkDeclIter pos ident1 ident2 args = do
-    ((envVar, envIter), envProc, envGen) <- ask
-    (srVar, stIter) <- get
+    ((envVar, envIter, envList), envProc, envGen) <- ask
+    (srVar, stIter, stList) <- get
     let loc = getNewLocIterT stIter
     let envIter' = M.insert ident1 loc envIter
     case M.lookup ident2 envGen of
         Nothing -> makeTypeError ("Generator " ++ getIdentString ident2 ++ " not found") pos
         Just (type_, argTypes) -> do
             checkArgs pos args argTypes
-            put (srVar, M.insert loc type_ stIter)
-            return ((envVar, envIter'), envProc, envGen)
+            put (srVar, M.insert loc type_ stIter, stList)
+            return ((envVar, envIter', envList), envProc, envGen)
 
 getNewLocT :: StoreVarT -> Loc
 getNewLocT stVar =
@@ -242,16 +235,16 @@ getNewLocIterT stIter =
 
 checkDecl :: BNFC'Position -> Type -> Ident -> Expr -> RSET EnvT
 checkDecl pos type_ ident expr = do
-    ((envVar, envIter), envProc, envGen) <- ask
-    (storeVar, storeIter) <- get
+    ((envVar, envIter, envList), envProc, envGen) <- ask
+    (storeVar, storeIter, stList) <- get
     typeExpr <- checkExpr expr
-    let typeExpr' = getValType typeExpr
+    let typeExpr' = typeTToType typeExpr
     if stringTypeOfType type_ == stringTypeOfType typeExpr'
         then do
             let loc = getNewLocT storeVar
             let envVar' = M.insert ident loc envVar
-            put (M.insert loc (toTypeT type_) storeVar, storeIter)
-            return ((envVar', envIter), envProc, envGen)
+            put (M.insert loc (toTypeT type_) storeVar, storeIter, stList)
+            return ((envVar', envIter, envList), envProc, envGen)
         else makeTypeError
             ("Variable " ++
             getIdentString ident ++
@@ -280,10 +273,10 @@ checkStmt ret_type can_break (BStmt_T pos block) = do
 checkStmt ret_type _can_break (Decl_T pos type_ ident expr) = undefined -- intended
 
 checkStmt ret_type _can_break (Ass_T pos ident expr) = do
-    ((envVar, envIter), envProc, envGen) <- ask
-    (storeVar, _storeIter) <- get
+    ((envVar, envIter, envList), envProc, envGen) <- ask
+    (storeVar, _storeIter, _stList) <- get
     typeExpr <- checkExpr expr
-    let typeExpr' = getValType typeExpr
+    let typeExpr' = typeTToType typeExpr
     case M.lookup ident envVar of
         Nothing -> do
             makeTypeError ("Variable " ++ getIdentString ident ++ " undefined") pos
@@ -291,7 +284,7 @@ checkStmt ret_type _can_break (Ass_T pos ident expr) = do
             Nothing -> do
                 makeTypeError ("Variable " ++ getIdentString ident ++ " undefined") pos
             Just type_ -> do
-                let type_' = getValType type_
+                let type_' = typeTToType type_
                 if stringTypeOfType type_' == stringTypeOfType typeExpr'
                     then return ()
                     else makeTypeError
@@ -309,7 +302,7 @@ checkStmt ret_type _can_break (SExp_T pos expr) = do
 
 checkStmt ret_type can_break (Cond_T pos expr block) = do
     type_ <- checkExpr expr
-    let type_' = getValType type_
+    let type_' = typeTToType type_
     if stringTypeOfType type_' == "bool"
         then checkBlock ret_type can_break block
         else makeTypeError
@@ -320,7 +313,7 @@ checkStmt ret_type can_break (Cond_T pos expr block) = do
 
 checkStmt ret_type can_break (CondElse_T pos expr block1 block2) = do
     type_ <- checkExpr expr
-    let type_' = getValType type_
+    let type_' = typeTToType type_
     if stringTypeOfType type_' == "bool"
         then do
             checkBlock ret_type can_break block1
@@ -333,7 +326,7 @@ checkStmt ret_type can_break (CondElse_T pos expr block1 block2) = do
 
 checkStmt ret_type can_break (While_T pos expr block) = do
     type_ <- checkExpr expr
-    let type_' = getValType type_
+    let type_' = typeTToType type_
     if stringTypeOfType type_' == "bool"
         then checkBlock ret_type True block
         else makeTypeError
@@ -343,8 +336,8 @@ checkStmt ret_type can_break (While_T pos expr block) = do
             pos
 
 checkStmt ret_type can_break (ForGen_T pos ident1 ident2 funargs block) = do
-    ((envVar, envIter), envProc, envGen) <- ask
-    (storeVar, storeIter) <- get
+    ((envVar, envIter, envList), envProc, envGen) <- ask
+    (storeVar, storeIter, stList) <- get
     -- check if generator exists
     case M.lookup ident2 envGen of
         Nothing -> makeTypeError ("Generator " ++ getIdentString ident2 ++ " not found") pos
@@ -352,8 +345,8 @@ checkStmt ret_type can_break (ForGen_T pos ident1 ident2 funargs block) = do
             checkArgs pos funargs argTypes
             let loc = getNewLocT storeVar
             let envVar' = M.insert ident1 loc envVar
-            put (M.insert loc type_ storeVar, storeIter)
-            local (const ((envVar', envIter), envProc, envGen)) (checkBlock ret_type can_break block)
+            put (M.insert loc type_ storeVar, storeIter, stList)
+            local (const ((envVar', envIter, envList), envProc, envGen)) (checkBlock ret_type can_break block)
 
 checkStmt ret_type _can_break (Incr_T pos ident) =
     checkIncrDecr pos ident
@@ -366,9 +359,9 @@ checkStmt ret_type _can_break (Return_T pos expr) = do
         then makeTypeError "Return in void function" pos
         else do
     type_ <- checkExpr expr
-    let type_' = getValType type_
+    let type_' = typeTToType type_
     retTypeT <- blockRetToTypeReturn pos ret_type
-    let retType' = getValType retTypeT
+    let retType' = typeTToType retTypeT
     if stringTypeOfType type_' == stringTypeOfType retType'
         then return ()
         else makeTypeError
@@ -380,9 +373,9 @@ checkStmt ret_type _can_break (Return_T pos expr) = do
 
 checkStmt ret_type _can_break (Yield_T pos expr) = do
     type_ <- checkExpr expr
-    let type_' = getValType type_
+    let type_' = typeTToType type_
     retTypeT <- blockRetToTypeYield pos ret_type
-    let retType' = getValType retTypeT
+    let retType' = typeTToType retTypeT
     if stringTypeOfType type_' == stringTypeOfType retType'
         then return ()
         else makeTypeError
@@ -398,19 +391,18 @@ checkStmt ret_type _can_break (DeclGen_T pos type_ ident expr) =
 checkStmt ret_type _can_break DeclList_T {} = undefined -- intended
 
 checkStmt ret_type _can_break (PushToList_T pos ident expr) = do
-    ((envVar, envIter), envProc, envGen) <- ask
-    (storeVar, storeIter) <- get
+    ((envVar, envIter, envList), envProc, envGen) <- ask
+    (storeVar, storeIter, stList) <- get
     typeExpr <- checkExpr expr
-    let typeExpr' = getValType typeExpr
-    case M.lookup ident envVar of
+    let typeExpr' = typeTToType typeExpr
+    case M.lookup ident envList of
         Nothing -> do
             makeTypeError ("Variable " ++ getIdentString ident ++ " undefined") pos
-        Just loc -> case M.lookup loc storeVar of
+        Just loc -> case M.lookup loc stList of
             Nothing -> do
                 makeTypeError ("Variable " ++ getIdentString ident ++ " undefined") pos
-            Just type_@(TabT _) -> do
-                let type_' = getValType type_
-                if stringTypeOfType type_' == stringTypeOfType typeExpr'
+            Just type_ -> 
+                if stringTypeOfType (typeTToType type_) == stringTypeOfType typeExpr'
                     then return ()
                     else makeTypeError
                         ("Variable " ++
@@ -418,82 +410,58 @@ checkStmt ret_type _can_break (PushToList_T pos ident expr) = do
                         " has type " ++
                         stringTypeOfType typeExpr' ++
                         " but should have type " ++
-                        stringTypeOfType type_')
+                        stringTypeOfType (typeTToType type_))
                         pos
-            _ -> do
-                makeTypeError ("Variable " ++ getIdentString ident ++ " is not a list") pos
 
 checkStmt ret_type _can_break (PopFromList_T pos ident) = do
-    ((envVar, envIter), envProc, envGen) <- ask
-    (storeVar, storeIter) <- get
-    case M.lookup ident envVar of
+    ((envVar, envIter, envList), envProc, envGen) <- ask
+    (storeVar, storeIter, stList) <- get
+    case M.lookup ident envList of
         Nothing -> do
             makeTypeError ("Variable " ++ getIdentString ident ++ " undefined") pos
-        Just loc -> case M.lookup loc storeVar of
+        Just loc -> case M.lookup loc stList of 
             Nothing -> do
                 makeTypeError ("Variable " ++ getIdentString ident ++ " undefined") pos
-            Just type_@(TabT _) -> do
+            Just type_ -> 
                 return ()
-            _ -> do
-                makeTypeError ("Variable " ++ getIdentString ident ++ " is not a list") pos
 
-checkStmt ret_type _can_break (AddToList_T pos ident expr1 expr2) = do 
-    ((envVar, envIter), envProc, envGen) <- ask
-    (storeVar, storeIter) <- get
-    typeExpr <- checkExpr expr1
-    let typeExpr' = getValType typeExpr
-    case M.lookup ident envVar of
+checkStmt ret_type _can_break (AddToList_T pos ident expr1 expr2) = do
+    ((envVar, envIter, envList), envProc, envGen) <- ask
+    (storeVar, storeIter, stList) <- get
+    typeExpr <- checkExpr expr2
+    let typeExpr' = typeTToType typeExpr
+    case M.lookup ident envList of
         Nothing -> do
             makeTypeError ("Variable " ++ getIdentString ident ++ " undefined") pos
-        Just loc -> case M.lookup loc storeVar of
+        Just loc -> case M.lookup loc stList of
             Nothing -> do
                 makeTypeError ("Variable " ++ getIdentString ident ++ " undefined") pos
-            Just type_@(TabT _) -> do
-                if stringTypeOfType typeExpr' == "int"
-                    then do 
-                        typeExpr2 <- checkExpr expr2
-                        let typeExpr2' = getValType typeExpr2 
-                        let type_' = getValType type_
-                        if stringTypeOfType type_' == stringTypeOfType typeExpr'
-                            then return ()
-                            else makeTypeError
-                                ("Variable " ++
-                                getIdentString ident ++
-                                " has type " ++
-                                stringTypeOfType typeExpr' ++
-                                " but should have type " ++
-                                stringTypeOfType type_')
-                                pos
-                    else do 
-                        makeTypeError "Expression should be of type int" pos
-            _ -> do
-                makeTypeError ("Variable " ++ getIdentString ident ++ " is not a list") pos
-    
-checkStmt ret_type _can_break (RemoveFromList_T pos ident expr) = do 
-    ((envVar, envIter), envProc, envGen) <- ask
-    (storeVar, storeIter) <- get
-    typeExpr <- checkExpr expr
-    let typeExpr' = getValType typeExpr
-    case M.lookup ident envVar of
-        Nothing -> do
-            makeTypeError ("Variable " ++ getIdentString ident ++ " undefined") pos
-        Just loc -> case M.lookup loc storeVar of
-            Nothing -> do
-                makeTypeError ("Variable " ++ getIdentString ident ++ " undefined") pos
-            Just type_@(TabT _) -> do
-                let type_' = getValType type_
-                if stringTypeOfType type_' == stringTypeOfType typeExpr'
+            Just type_ -> 
+                if stringTypeOfType (typeTToType type_) == stringTypeOfType typeExpr'
                     then return ()
-                    else makeTypeError
-                        ("Variable " ++
-                        getIdentString ident ++
-                        " has type " ++
-                        stringTypeOfType typeExpr' ++
-                        " but should have type " ++
-                        stringTypeOfType type_')
-                        pos
-            _ -> do
-                makeTypeError ("Variable " ++ getIdentString ident ++ " is not a list") pos
+                    else do 
+                        typeExpr1 <- checkExpr expr1
+                        let typeExpr1' = typeTToType typeExpr1
+                        if "int" == stringTypeOfType typeExpr'
+                            then return ()
+                            else makeTypeError "Index type mismatch" pos
+
+checkStmt ret_type _can_break (RemoveFromList_T pos ident expr) = do 
+    ((envVar, envIter, envList), envProc, envGen) <- ask
+    (storeVar, storeIter, stList) <- get
+    typeExpr <- checkExpr expr
+    let typeExpr' = typeTToType typeExpr
+    case M.lookup ident envList of
+        Nothing -> do
+            makeTypeError ("Variable " ++ getIdentString ident ++ " undefined") pos
+        Just loc -> case M.lookup loc stList of
+            Nothing -> do
+                makeTypeError ("Variable " ++ getIdentString ident ++ " undefined") pos
+            Just type_ -> 
+                if "int" == stringTypeOfType typeExpr'
+                    then return ()
+                    else makeTypeError "Index type mismatch" pos
+    
 
 blockRetToTypeReturn :: BNFC'Position -> BlockRetType -> RSET TypeT
 blockRetToTypeReturn pos (RetType type_) = return (toTypeT type_)
@@ -507,8 +475,8 @@ blockRetToTypeYield pos _ = makeTypeError "Yield outside generator" pos
 
 checkIncrDecr :: BNFC'Position -> Ident -> RSET ()
 checkIncrDecr pos ident = do
-    ((envVar, _envIter), _envProc, _envGen) <- ask
-    (storeVar, _storeIter) <- get
+    ((envVar, _envIter, _envList), _envProc, _envGen) <- ask
+    (storeVar, _storeIter, _stList) <- get
     case M.lookup ident envVar of
         Nothing -> do
             makeTypeError ("Variable " ++ getIdentString ident ++ " undefined") pos
@@ -516,7 +484,7 @@ checkIncrDecr pos ident = do
             Nothing -> do
                 makeTypeError ("Variable " ++ getIdentString ident ++ " undefined") pos
             Just type_ -> do
-                let type_' = getValType type_
+                let type_' = typeTToType type_
                 if stringTypeOfType type_' == "int"
                     then return ()
                     else makeTypeError
@@ -529,16 +497,16 @@ checkIncrDecr pos ident = do
 
 checkGlobVar :: BNFC'Position -> Type -> Ident -> Expr -> RSET EnvT
 checkGlobVar pos type_ ident expr = do
-    ((envVar, envIter), envProc, envGen) <- ask
-    (storeVar, storeIter) <- get
+    ((envVar, envIter, envList), envProc, envGen) <- ask
+    (storeVar, storeIter, stList) <- get
     typeExpr <- checkExpr expr
-    let typeExpr' = getValType typeExpr
+    let typeExpr' = typeTToType typeExpr
     if stringTypeOfType type_ == stringTypeOfType typeExpr'
         then do
             let loc = getNewLocT storeVar
             let envVar' = M.insert ident loc envVar
-            put (M.insert loc (toTypeT type_) storeVar, storeIter)
-            return ((envVar', envIter), envProc, envGen)
+            put (M.insert loc (toTypeT type_) storeVar, storeIter, stList)
+            return ((envVar', envIter, envList), envProc, envGen)
         else makeTypeError
             ("Variable " ++
             getIdentString ident ++
@@ -555,19 +523,10 @@ toTypeT type_ = case type_ of
     Str_T _ -> StrT
     Bool_T _ -> BoolT
 
-getValType :: TypeT -> Type
-getValType type_ = case type_ of
-    IntT -> Int_T Nothing
-    CharT -> CharT_T Nothing
-    StrT -> Str_T Nothing
-    BoolT -> Bool_T Nothing
-    TabT _ -> undefined -- intended
-    VoidT -> undefined -- intended
-
 checkExpr :: Expr -> RSET TypeT
 checkExpr (EVar_T pos var) = do
-    ((envVar, _envIter), _envProc, _envGen) <- ask
-    (storeVar, _storeIter) <- get
+    ((envVar, _envIter, envList), _envProc, _envGen) <- ask
+    (storeVar, _storeIter, _stList) <- get
     let ident = getVarIdent var
     case M.lookup ident envVar of
         Just loc -> do
@@ -586,14 +545,14 @@ checkExpr (ELit_T pos lit) = do
 
 checkExpr (Neg_T pos expr) = do
     typeExpr <- checkExpr expr
-    let typeExpr' = getValType typeExpr
+    let typeExpr' = typeTToType typeExpr
     if  stringTypeOfType typeExpr' == "int"
         then return IntT
         else makeTypeError "Expression should be of type int" pos
 
 checkExpr (Not_T pos expr) = do
     typeExpr <- checkExpr expr
-    let typeExpr' = getValType typeExpr
+    let typeExpr' = typeTToType typeExpr
     if  stringTypeOfType typeExpr' == "bool"
         then return BoolT
         else makeTypeError "Expression should be of type bool" pos
@@ -601,10 +560,10 @@ checkExpr (Not_T pos expr) = do
 checkExpr (EMul_T pos expr1 mulop expr2) = do
     typeExpr1 <- checkExpr expr1
     typeExpr2 <- checkExpr expr2
-    let typeExpr1' = getValType typeExpr1
+    let typeExpr1' = typeTToType typeExpr1
     if  stringTypeOfType typeExpr1' == "int"
         then do
-            let typeExpr2' = getValType typeExpr2
+            let typeExpr2' = typeTToType typeExpr2
             if  stringTypeOfType typeExpr2' == "int"
                 then return IntT
                 else makeTypeError "Expression should be of type int" pos
@@ -612,9 +571,9 @@ checkExpr (EMul_T pos expr1 mulop expr2) = do
 
 checkExpr (EAdd_T pos expr1 addop expr2) = do
     typeExpr1 <- checkExpr expr1
-    let typeExpr1' = getValType typeExpr1
+    let typeExpr1' = typeTToType typeExpr1
     typeExpr2 <- checkExpr expr2
-    let typeExpr2' = getValType typeExpr2
+    let typeExpr2' = typeTToType typeExpr2
     let typeStr1 = stringTypeOfType typeExpr1'
     let typeStr2 = stringTypeOfType typeExpr2'
     case (typeStr1, typeStr2) of
@@ -624,11 +583,11 @@ checkExpr (EAdd_T pos expr1 addop expr2) = do
 
 checkExpr (ERel_T pos expr1 relop expr2) = do
     typeExpr1 <- checkExpr expr1
-    let typeExpr1' = getValType typeExpr1
+    let typeExpr1' = typeTToType typeExpr1
     if  stringTypeOfType typeExpr1' == "int"
         then do
             typeExpr2 <- checkExpr expr2
-            let typeExpr2' = getValType typeExpr2
+            let typeExpr2' = typeTToType typeExpr2
             if  stringTypeOfType typeExpr2' == "int"
                 then return BoolT
                 else makeTypeError "Expression should be of type int" pos
@@ -637,13 +596,13 @@ checkExpr (ERel_T pos expr1 relop expr2) = do
                 case relop of
                     EQU_T _ -> do
                         typeExpr2 <- checkExpr expr2
-                        let typeExpr2' = getValType typeExpr2
+                        let typeExpr2' = typeTToType typeExpr2
                         if  stringTypeOfType typeExpr2' == "string"
                             then return BoolT
                             else makeTypeError "Expression should be of type string" pos
                     NE_T _ -> do
                         typeExpr2 <- checkExpr expr2
-                        let typeExpr2' = getValType typeExpr2
+                        let typeExpr2' = typeTToType typeExpr2
                         if  stringTypeOfType typeExpr2' == "string"
                             then return BoolT
                             else makeTypeError "Expression should be of type string" pos
@@ -653,11 +612,11 @@ checkExpr (ERel_T pos expr1 relop expr2) = do
 
 checkExpr (EAnd_T pos expr1 expr2) = do
     typeExpr1 <- checkExpr expr1
-    let typeExpr1' = getValType typeExpr1
+    let typeExpr1' = typeTToType typeExpr1
     if  stringTypeOfType typeExpr1' == "bool"
         then do
             typeExpr2 <- checkExpr expr2
-            let typeExpr2' = getValType typeExpr2
+            let typeExpr2' = typeTToType typeExpr2
             if  stringTypeOfType typeExpr2' == "bool"
                 then return BoolT
                 else makeTypeError "Expression should be of type bool" pos
@@ -665,11 +624,11 @@ checkExpr (EAnd_T pos expr1 expr2) = do
 
 checkExpr (EOr_T pos expr1 expr2) = do
     typeExpr1 <- checkExpr expr1
-    let typeExpr1' = getValType typeExpr1
+    let typeExpr1' = typeTToType typeExpr1
     if  stringTypeOfType typeExpr1' == "bool"
         then do
             typeExpr2 <- checkExpr expr2
-            let typeExpr2' = getValType typeExpr2
+            let typeExpr2' = typeTToType typeExpr2
             if  stringTypeOfType typeExpr2' == "bool"
                 then return BoolT
                 else makeTypeError "Expression should be of type bool" pos
@@ -677,7 +636,7 @@ checkExpr (EOr_T pos expr1 expr2) = do
 
 checkExpr (ECast_T pos type_ expr) = do
     typeExpr <- checkExpr expr
-    let typeExpr' = getValType typeExpr
+    let typeExpr' = typeTToType typeExpr
     case (stringTypeOfType typeExpr', type_) of
         ("int", Int_T _) -> return IntT
         ("int", CharT_T _) -> return CharT
@@ -686,15 +645,15 @@ checkExpr (ECast_T pos type_ expr) = do
         ("char", Int_T _) -> return IntT
         ("char", CharT_T _) -> return CharT
         ("char", Str_T _) -> return StrT
-        ("str", Str_T _) -> return StrT
+        ("string", Str_T _) -> return StrT
         ("bool", Int_T _) -> return IntT
         ("bool", Str_T _) -> return StrT
         ("bool", Bool_T _) -> return BoolT
         _ -> makeTypeError ("Cannot cast " ++ stringTypeOfType typeExpr' ++ " to " ++ stringTypeOfType type_) pos
 
 checkExpr (EGenNext_T pos ident) = do
-    ((envVar, envIter), envProc, envGen) <- ask
-    (stVar, stIter) <- get
+    ((envVar, envIter, envList), envProc, envGen) <- ask
+    (stVar, stIter, stList) <- get
     case M.lookup ident envIter of
         Nothing -> makeTypeError ("Iterator " ++ getIdentString ident ++ " not declared") pos
         Just loc -> do
@@ -703,8 +662,7 @@ checkExpr (EGenNext_T pos ident) = do
                 Just type_ -> return type_
 
 checkExpr (App_T pos ident funargs) = do
-    ((envVar, envIter), envProc, envGen) <- ask
-    storeVar <- get
+    ((envVar, envIter, envList), envProc, envGen) <- ask
     case M.lookup ident envProc of
         Nothing -> do
             if getIdentString ident == "print" || getIdentString ident == "print_line"
@@ -721,27 +679,20 @@ checkExpr (App_T pos ident funargs) = do
             return type_
 
 checkExpr (EListElem_T pos ident expr) = do
-    ((envVar, envIter), envProc, envGen) <- ask
-    (stVar, stIter) <- get
-    case M.lookup ident envVar of
-        Nothing -> makeTypeError ("Variable " ++ getIdentString ident ++ " not declared") pos
-        Just loc -> do
-            case M.lookup loc stVar of
-                Nothing -> makeTypeError ("Variable " ++ getIdentString ident ++ " not defined") pos
-                Just (TabT type_) -> do
-                    typeExpr <- checkExpr expr
-                    let typeExpr' = getValType typeExpr
-                    if  stringTypeOfType typeExpr' == "int"
-                        then return (listToTypeT type_)
-                        else makeTypeError "Expression should be of type int" pos
-                _ -> makeTypeError ("Variable " ++ getIdentString ident ++ " is not a list") pos
-
-listToTypeT :: TypePlainT -> TypeT
-listToTypeT type_ = case type_ of
-    IntPlainT -> IntT
-    CharPlainT -> CharT
-    StrPlainT -> StrT
-    BoolPlainT -> BoolT
+    ((envVar, envIter, envList), envProc, envGen) <- ask
+    (storeVar, storeIter, stList) <- get
+    typeExpr <- checkExpr expr
+    let typeExpr' = typeTToType typeExpr
+    case M.lookup ident envList of 
+        Nothing -> do
+            makeTypeError ("Variable " ++ getIdentString ident ++ " undefined") pos
+        Just loc -> case M.lookup loc stList of
+            Nothing -> do
+                makeTypeError ("Variable " ++ getIdentString ident ++ " undefined") pos
+            Just type_ -> 
+                if "int" == stringTypeOfType typeExpr'
+                    then return type_
+                    else makeTypeError "Index type mismatch" pos
 
 checkArgs :: BNFC'Position -> [FunArg] -> [TypeT] -> RSET ()
 checkArgs pos [] [] = return ()
@@ -750,8 +701,8 @@ checkArgs pos (farg : fargs) (argT : argsT) = do
     case farg of
         AsValue_T pos expr -> do
             typeExpr <- checkExpr expr
-            let typeExpr' = getValType typeExpr
-            let argT' = getValType argT
+            let typeExpr' = typeTToType typeExpr
+            let argT' = typeTToType argT
             if  stringTypeOfType typeExpr' == stringTypeOfType argT'
                 then checkArgs pos fargs argsT
                 else
@@ -760,8 +711,8 @@ checkArgs pos (farg : fargs) (argT : argsT) = do
                         stringTypeOfType argT') pos
         AsRef_T pos var -> do
             let ident = getVarIdent var
-            ((envVar, envIter), envProc, envGen) <- ask
-            (storeVar, storeIter) <- get
+            ((envVar, envIter, _envList), envProc, envGen) <- ask
+            (storeVar, storeIter, stList) <- get
             case M.lookup ident envVar of
                 Nothing -> makeTypeError (
                     "Variable " ++
@@ -775,8 +726,8 @@ checkArgs pos (farg : fargs) (argT : argsT) = do
                                 getIdentString ident ++
                                 " not declared") pos
                         Just typeT_ -> do
-                            let typeOfArg_ = getValType typeT_
-                            let argT' = getValType argT
+                            let typeOfArg_ = typeTToType typeT_
+                            let argT' = typeTToType argT
                             if  stringTypeOfType typeOfArg_ == stringTypeOfType argT'
                                 then checkArgs pos fargs argsT
                                 else
@@ -786,5 +737,10 @@ checkArgs pos (farg : fargs) (argT : argsT) = do
 
 checkArgs pos _ _ = makeTypeError "Wrong number of arguments" pos
 
-
-
+typeTToType :: TypeT -> Type
+typeTToType type_ = case type_ of
+    IntT -> Int_T Nothing
+    CharT -> CharT_T Nothing
+    StrT -> Str_T Nothing
+    BoolT -> Bool_T Nothing
+    VoidT -> undefined -- intended
