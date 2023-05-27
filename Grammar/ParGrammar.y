@@ -23,52 +23,54 @@ import LexGrammar
 %monad { Err } { (>>=) } { return }
 %tokentype {Token}
 %token
-  '!'      { PT _ (TS _ 1)  }
-  '!='     { PT _ (TS _ 2)  }
-  '%'      { PT _ (TS _ 3)  }
-  '&'      { PT _ (TS _ 4)  }
-  '&&'     { PT _ (TS _ 5)  }
-  '('      { PT _ (TS _ 6)  }
-  ')'      { PT _ (TS _ 7)  }
-  '*'      { PT _ (TS _ 8)  }
-  '+'      { PT _ (TS _ 9)  }
-  '++'     { PT _ (TS _ 10) }
-  ','      { PT _ (TS _ 11) }
-  '-'      { PT _ (TS _ 12) }
-  '--'     { PT _ (TS _ 13) }
-  '/'      { PT _ (TS _ 14) }
-  ';'      { PT _ (TS _ 15) }
-  '<'      { PT _ (TS _ 16) }
-  '<='     { PT _ (TS _ 17) }
-  '='      { PT _ (TS _ 18) }
-  '=='     { PT _ (TS _ 19) }
-  '>'      { PT _ (TS _ 20) }
-  '>='     { PT _ (TS _ 21) }
-  'Gen'    { PT _ (TS _ 22) }
-  'Glob'   { PT _ (TS _ 23) }
-  'Proc'   { PT _ (TS _ 24) }
-  'bool'   { PT _ (TS _ 25) }
-  'char'   { PT _ (TS _ 26) }
-  'else'   { PT _ (TS _ 27) }
-  'false'  { PT _ (TS _ 28) }
-  'for'    { PT _ (TS _ 29) }
-  'gen'    { PT _ (TS _ 30) }
-  'if'     { PT _ (TS _ 31) }
-  'in'     { PT _ (TS _ 32) }
-  'int'    { PT _ (TS _ 33) }
-  'next'   { PT _ (TS _ 34) }
-  'return' { PT _ (TS _ 35) }
-  'string' { PT _ (TS _ 36) }
-  'true'   { PT _ (TS _ 37) }
-  'while'  { PT _ (TS _ 38) }
-  'yield'  { PT _ (TS _ 39) }
-  '{'      { PT _ (TS _ 40) }
-  '||'     { PT _ (TS _ 41) }
-  '}'      { PT _ (TS _ 42) }
-  L_Ident  { PT _ (TV _)    }
-  L_charac { PT _ (TC _)    }
-  L_integ  { PT _ (TI _)    }
-  L_quoted { PT _ (TL _)    }
+  '!'        { PT _ (TS _ 1)  }
+  '!='       { PT _ (TS _ 2)  }
+  '%'        { PT _ (TS _ 3)  }
+  '&'        { PT _ (TS _ 4)  }
+  '&&'       { PT _ (TS _ 5)  }
+  '('        { PT _ (TS _ 6)  }
+  ')'        { PT _ (TS _ 7)  }
+  '*'        { PT _ (TS _ 8)  }
+  '+'        { PT _ (TS _ 9)  }
+  '++'       { PT _ (TS _ 10) }
+  ','        { PT _ (TS _ 11) }
+  '-'        { PT _ (TS _ 12) }
+  '--'       { PT _ (TS _ 13) }
+  '/'        { PT _ (TS _ 14) }
+  ';'        { PT _ (TS _ 15) }
+  '<'        { PT _ (TS _ 16) }
+  '<='       { PT _ (TS _ 17) }
+  '='        { PT _ (TS _ 18) }
+  '=='       { PT _ (TS _ 19) }
+  '>'        { PT _ (TS _ 20) }
+  '>='       { PT _ (TS _ 21) }
+  'Gen'      { PT _ (TS _ 22) }
+  'Glob'     { PT _ (TS _ 23) }
+  'Proc'     { PT _ (TS _ 24) }
+  'bool'     { PT _ (TS _ 25) }
+  'break'    { PT _ (TS _ 26) }
+  'char'     { PT _ (TS _ 27) }
+  'continue' { PT _ (TS _ 28) }
+  'else'     { PT _ (TS _ 29) }
+  'false'    { PT _ (TS _ 30) }
+  'for'      { PT _ (TS _ 31) }
+  'gen'      { PT _ (TS _ 32) }
+  'if'       { PT _ (TS _ 33) }
+  'in'       { PT _ (TS _ 34) }
+  'int'      { PT _ (TS _ 35) }
+  'next'     { PT _ (TS _ 36) }
+  'return'   { PT _ (TS _ 37) }
+  'string'   { PT _ (TS _ 38) }
+  'true'     { PT _ (TS _ 39) }
+  'while'    { PT _ (TS _ 40) }
+  'yield'    { PT _ (TS _ 41) }
+  '{'        { PT _ (TS _ 42) }
+  '||'       { PT _ (TS _ 43) }
+  '}'        { PT _ (TS _ 44) }
+  L_Ident    { PT _ (TV _)    }
+  L_charac   { PT _ (TC _)    }
+  L_integ    { PT _ (TI _)    }
+  L_quoted   { PT _ (TL _)    }
 
 %%
 
@@ -127,6 +129,8 @@ Stmt
   | Ident '=' Expr ';' { (fst $1, AbsGrammar.Ass_T (fst $1) (snd $1) (snd $3)) }
   | Ident '++' ';' { (fst $1, AbsGrammar.Incr_T (fst $1) (snd $1)) }
   | Ident '--' ';' { (fst $1, AbsGrammar.Decr_T (fst $1) (snd $1)) }
+  | 'break' ';' { (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1), AbsGrammar.Break_T (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1))) }
+  | 'continue' ';' { (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1), AbsGrammar.Continue_T (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1))) }
   | 'if' '(' Expr ')' Block { (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1), AbsGrammar.Cond_T (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1)) (snd $3) (snd $5)) }
   | 'if' '(' Expr ')' Block 'else' Block { (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1), AbsGrammar.CondElse_T (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1)) (snd $3) (snd $5) (snd $7)) }
   | 'while' '(' Expr ')' Block { (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1), AbsGrammar.While_T (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1)) (snd $3) (snd $5)) }

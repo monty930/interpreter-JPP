@@ -46,6 +46,8 @@ data Stmt' a
     | Ass_T a Ident (Expr' a)
     | Incr_T a Ident
     | Decr_T a Ident
+    | Break_T a
+    | Continue_T a
     | Cond_T a (Expr' a) (Block' a)
     | CondElse_T a (Expr' a) (Block' a) (Block' a)
     | While_T a (Expr' a) (Block' a)
@@ -158,6 +160,8 @@ instance HasPosition Stmt where
     Ass_T p _ _ -> p
     Incr_T p _ -> p
     Decr_T p _ -> p
+    Break_T p -> p
+    Continue_T p -> p
     Cond_T p _ _ -> p
     CondElse_T p _ _ _ -> p
     While_T p _ _ -> p

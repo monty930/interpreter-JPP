@@ -90,7 +90,7 @@ Program
 
 TopDef :: { (AbsGrammar.BNFC'Position, AbsGrammar.TopDef) }
 TopDef
-  : RetVal Ident '(' ListArg ')' { (fst $1, AbsGrammar.ProcDecl_T (fst $1) (snd $1) (snd $2) (snd $4)) }
+  : RetVal Ident '(' ListArg ')' ';' { (fst $1, AbsGrammar.ProcDecl_T (fst $1) (snd $1) (snd $2) (snd $4)) }
   | RetVal Ident '(' ListArg ')' Block { (fst $1, AbsGrammar.ProcDef_T (fst $1) (snd $1) (snd $2) (snd $4) (snd $6)) }
   | 'Glob' Type Ident '=' Expr ';' { (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1), AbsGrammar.GlobVar_T (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1)) (snd $2) (snd $3) (snd $5)) }
   | 'Gen' Type Ident '(' ListArg ')' Block { (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1), AbsGrammar.Gener_T (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1)) (snd $2) (snd $3) (snd $5) (snd $7)) }

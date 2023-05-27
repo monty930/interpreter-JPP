@@ -17,6 +17,8 @@ Decl_T.    Stmt ::= Type Ident "=" Expr ";" ;
 Ass_T.     Stmt ::= Ident "=" Expr  ";" ;
 Incr_T.    Stmt ::= Ident "++"  ";" ;
 Decr_T.    Stmt ::= Ident "--"  ";" ;
+Break_T.    Stmt ::= "break" ";" ;
+Continue_T. Stmt ::= "continue" ";" ;
 Cond_T.    Stmt ::= "if" "(" Expr ")" Block  ;
 CondElse_T. Stmt ::= "if" "(" Expr ")" Block "else" Block  ;
 While_T.   Stmt ::= "while" "(" Expr ")" Block ;

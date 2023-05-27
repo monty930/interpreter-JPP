@@ -1,0 +1,122 @@
+Gen int g(int i) {
+    // simple test
+    while (true) {
+        if (i == 1) {
+            break;
+        }
+        i++;
+        if (i == 1) {
+            continue;
+        }
+        print_line("SHOULD NOT BE PRINTED");
+    }
+
+    // nested whiles break
+    while (true) {
+        while (true) {
+            break;
+        }
+        print_line("(1g) should be printed");
+        break;
+    }
+
+    // nested whiles continue
+    while (true) {
+        while (true) {
+            if (i == 1) {
+                i++;
+                continue;
+            }
+            print_line("(2g) should be printed once");
+            break;
+        }
+        print_line("(3g) should be printed");
+        break;
+    }
+
+    yield (1);
+}
+
+int f(int i) {
+    // simple test
+    while (true) {
+        if (i == 1) {
+            break;
+        }
+        i++;
+        if (i == 1) {
+            continue;
+        }
+        print_line("SHOULD NOT BE PRINTED");
+    }
+
+    // nested whiles break
+    while (true) {
+        while (true) {
+            break;
+        }
+        print_line("(1f) should be printed");
+        break;
+    }
+
+    // nested whiles continue
+    while (true) {
+        while (true) {
+            if (i == 1) {
+                i++;
+                continue;
+            }
+            print_line("(2f) should be printed once");
+            break;
+        }
+        print_line("(3f) should be printed");
+        break;
+    }
+
+    return (1);
+}
+
+Proc main() {
+    int i = 0;
+
+    // simple test
+    while (true) {
+        if (i == 1) {
+            break;
+        }
+        i++;
+        if (i == 1) {
+            continue;
+        }
+        print_line("SHOULD NOT BE PRINTED");
+    }
+
+    // nested whiles break
+    while (true) {
+        while (true) {
+            break;
+        }
+        print_line("(1) should be printed");
+        break;
+    }
+
+    // nested whiles continue
+    while (true) {
+        while (true) {
+            if (i == 1) {
+                i++;
+                continue;
+            }
+            print_line("(2) should be printed once");
+            break;
+        }
+        print_line("(3) should be printed");
+        break;
+    }
+
+    // the same test in function f 
+    f(0);
+
+    gen zm = g(0);
+    next(zm);
+}

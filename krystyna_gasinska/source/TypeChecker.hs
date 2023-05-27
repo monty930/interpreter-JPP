@@ -83,7 +83,7 @@ checkGener pos type_ ident args block = do
     let type_' = toTypeT type_
     let envGen' = M.insert ident (type_', argTypes) envGen
     let ret_type = typeTToBlockYieldType type_'
-    local (const ((envVar', envIter), envProc, envGen')) (checkBlock ret_type block)
+    local (const ((envVar', envIter), envProc, envGen')) (checkBlock ret_type False block)
     return envGen'
 
 typeTToBlockYieldType :: TypeT -> BlockRetType
@@ -108,7 +108,7 @@ checkProcDef pos retval ident args block = do
                 then do
                     let envProc' = M.insert ident (type_', argTypes', True) envProc
                     let ret_type = typeTToBlockRetType type_'
-                    local (const ((envVar', envIter), envProc', envGen)) (checkBlock ret_type block)
+                    local (const ((envVar', envIter), envProc', envGen)) (checkBlock ret_type False block)
                     return envProc'
                 else do
                     makeTypeError ("Procedure " ++ getIdentString ident ++ " is already defined with different type or arguments.") pos
@@ -117,7 +117,7 @@ checkProcDef pos retval ident args block = do
         _ -> do 
             let envProc' = M.insert ident (type_, argTypes, True) envProc
             let ret_type = typeTToBlockRetType type_
-            local (const ((envVar', envIter), envProc', envGen)) (checkBlock ret_type block)
+            local (const ((envVar', envIter), envProc', envGen)) (checkBlock ret_type False block)
             return envProc'
 
 checkProcDecl :: BNFC'Position -> RetVal -> Ident -> [Arg] -> RSET EnvProcT
@@ -157,24 +157,24 @@ insertArgsToEnvProc pos (envVar, argTypes) (arg : args) = do
     put (M.insert loc type_ storeVar, storeIter)
     insertArgsToEnvProc pos (envVar', argTypes ++ [type_]) args
 
-checkBlock :: BlockRetType -> Block -> RSET ()
-checkBlock ret_type (Block_T pos stmts) = do
-    checkStmts ret_type stmts
+checkBlock :: BlockRetType -> Bool -> Block -> RSET ()
+checkBlock ret_type can_break (Block_T pos stmts) = do
+    checkStmts ret_type can_break stmts
 
-checkStmts :: BlockRetType -> [Stmt] -> RSET ()
-checkStmts ret_type [] = return ()
+checkStmts :: BlockRetType -> Bool -> [Stmt] -> RSET ()
+checkStmts ret_type can_break [] = return ()
 
-checkStmts ret_type (stmt : stmts) = do
+checkStmts ret_type can_break (stmt : stmts) = do
     case stmt of 
         Decl_T pos type_ ident expr -> do 
             env <- checkDecl pos type_ ident expr
-            local (const env) (checkStmts ret_type stmts)
+            local (const env) (checkStmts ret_type can_break stmts)
         DeclGen_T pos ident1 ident2 args -> do 
             env <- checkDeclIter pos ident1 ident2 args
-            local (const env) (checkStmts ret_type stmts)
+            local (const env) (checkStmts ret_type can_break stmts)
         _no_decl -> do
-            checkStmt ret_type stmt
-            checkStmts ret_type stmts
+            checkStmt ret_type can_break stmt
+            checkStmts ret_type can_break stmts
 
 checkDeclIter :: BNFC'Position -> Ident -> Ident -> [FunArg] -> RSET EnvT
 checkDeclIter pos ident1 ident2 args = do
@@ -222,15 +222,25 @@ checkDecl pos type_ ident expr = do
             stringTypeOfType type_) 
             pos
 
-checkStmt :: BlockRetType -> Stmt -> RSET ()
-checkStmt ret_type (Empty_T pos) = return ()
+checkStmt :: BlockRetType -> Bool -> Stmt -> RSET ()
+checkStmt ret_type _can_break (Empty_T pos) = return ()
 
-checkStmt ret_type (BStmt_T pos block) = do
-    checkBlock ret_type block
+checkStmt ret_type can_break (Continue_T pos) = do
+    if can_break
+        then return ()
+        else makeTypeError "Continue outside loop" pos
 
-checkStmt ret_type (Decl_T pos type_ ident expr) = undefined -- intended
+checkStmt ret_type can_break (Break_T pos) = do
+    if can_break
+        then return ()
+        else makeTypeError "Break outside loop" pos
 
-checkStmt ret_type (Ass_T pos ident expr) = do 
+checkStmt ret_type can_break (BStmt_T pos block) = do
+    checkBlock ret_type can_break block
+
+checkStmt ret_type _can_break (Decl_T pos type_ ident expr) = undefined -- intended
+
+checkStmt ret_type _can_break (Ass_T pos ident expr) = do 
     ((envVar, envIter), envProc, envGen) <- ask
     (storeVar, _storeIter) <- get
     typeExpr <- checkExpr expr
@@ -254,46 +264,46 @@ checkStmt ret_type (Ass_T pos ident expr) = do
                         stringTypeOfType type_') 
                         pos
 
-checkStmt ret_type (SExp_T pos expr) = do
+checkStmt ret_type _can_break (SExp_T pos expr) = do
     checkExpr expr
     return ()
 
-checkStmt ret_type (Cond_T pos expr block) = do 
+checkStmt ret_type can_break (Cond_T pos expr block) = do 
     type_ <- checkExpr expr
     let type_' = getValType type_
     if stringTypeOfType type_' == "bool"
-        then checkBlock ret_type block
+        then checkBlock ret_type can_break block
         else makeTypeError 
             ("Condition has type " ++ 
             stringTypeOfType type_' ++ 
             " but should have type bool") 
             pos
 
-checkStmt ret_type (CondElse_T pos expr block1 block2) = do 
+checkStmt ret_type can_break (CondElse_T pos expr block1 block2) = do 
     type_ <- checkExpr expr
     let type_' = getValType type_
     if stringTypeOfType type_' == "bool"
         then do
-            checkBlock ret_type block1
-            checkBlock ret_type block2
+            checkBlock ret_type can_break block1
+            checkBlock ret_type can_break block2
         else makeTypeError 
             ("Condition has type " ++ 
             stringTypeOfType type_' ++ 
             " but should have type bool") 
             pos
 
-checkStmt ret_type (While_T pos expr block) = do
+checkStmt ret_type can_break (While_T pos expr block) = do
     type_ <- checkExpr expr
     let type_' = getValType type_
     if stringTypeOfType type_' == "bool"
-        then checkBlock ret_type block
+        then checkBlock ret_type True block
         else makeTypeError 
             ("Condition has type " ++ 
             stringTypeOfType type_' ++ 
             " but should have type bool") 
             pos
 
-checkStmt ret_type (ForGen_T pos ident1 ident2 funargs block) = do
+checkStmt ret_type can_break (ForGen_T pos ident1 ident2 funargs block) = do
     ((envVar, envIter), envProc, envGen) <- ask
     (storeVar, storeIter) <- get
     -- check if generator exists
@@ -304,21 +314,21 @@ checkStmt ret_type (ForGen_T pos ident1 ident2 funargs block) = do
             let loc = getNewLocT storeVar
             let envVar' = M.insert ident1 loc envVar
             put (M.insert loc type_ storeVar, storeIter)
-            local (const ((envVar', envIter), envProc, envGen)) (checkBlock ret_type block)
+            local (const ((envVar', envIter), envProc, envGen)) (checkBlock ret_type can_break block)
 
-checkStmt retType (Incr_T pos ident) = 
+checkStmt ret_type _can_break (Incr_T pos ident) = 
     checkIncrDecr pos ident
 
-checkStmt retType (Decr_T pos ident) = do
+checkStmt ret_type _can_break (Decr_T pos ident) = do
     checkIncrDecr pos ident
 
-checkStmt retType (Return_T pos expr) = do
-    if retType == NoRetType
+checkStmt ret_type _can_break (Return_T pos expr) = do
+    if ret_type == NoRetType
         then makeTypeError "Return in void function" pos
         else do
     type_ <- checkExpr expr
     let type_' = getValType type_
-    retTypeT <- blockRetToTypeReturn pos retType
+    retTypeT <- blockRetToTypeReturn pos ret_type
     let retType' = getValType retTypeT
     if stringTypeOfType type_' == stringTypeOfType retType'
         then return ()
@@ -329,10 +339,10 @@ checkStmt retType (Return_T pos expr) = do
             stringTypeOfType retType') 
             pos
 
-checkStmt retType (Yield_T pos expr) = do 
+checkStmt ret_type _can_break (Yield_T pos expr) = do 
     type_ <- checkExpr expr
     let type_' = getValType type_
-    retTypeT <- blockRetToTypeYield pos retType
+    retTypeT <- blockRetToTypeYield pos ret_type
     let retType' = getValType retTypeT
     if stringTypeOfType type_' == stringTypeOfType retType'
         then return ()
@@ -343,7 +353,7 @@ checkStmt retType (Yield_T pos expr) = do
             stringTypeOfType retType') 
             pos
 
-checkStmt retType (DeclGen_T pos type_ ident expr) =
+checkStmt ret_type _can_break (DeclGen_T pos type_ ident expr) =
     undefined -- intended
 
 blockRetToTypeReturn :: BNFC'Position -> BlockRetType -> RSET TypeT

@@ -149,10 +149,10 @@ evalGenState ret_type (GenStateStmt (Ass_T pos ident expr) : stmts) = do
             else makeError "Type mismatch" pos
         Nothing -> makeError "Variable not in scope" pos
 
-evalGenState ret_type (GenStateStmt (ForGen_T pos ident1 ident2 funargs for_body) : stmts) = do 
+evalGenState ret_type (GenStateStmt (ForGen_T pos ident1 ident2 funargs for_body) : stmts) = do
   ((envVar, envIter), envProc, envGen) <- ask
   (stVar, stIter) <- get
-  case M.lookup ident2 envGen of 
+  case M.lookup ident2 envGen of
     Nothing -> do
       makeError "Generator not implemented yet" pos
     Just (type_, args, block, envVarIter) -> do
@@ -160,8 +160,6 @@ evalGenState ret_type (GenStateStmt (ForGen_T pos ident1 ident2 funargs for_body
       (stVar, stIter) <- get
       let newStVar = M.insert newLoc (defaultValue type_) stVar
       put (newStVar, stIter)
-      -- TODO: add ident1 and args to envVarIter
-      -- let (envVar, envIter) = envVarIter -- TOD: CHYBA
       (envVarIter', _, _) <- addArgsToEnvGen pos (envVarIter, envProc, envGen) args funargs
       let envVar' = M.insert ident1 newLoc envVar
       let newEnvVarIter = (envVar', envIter)
@@ -181,10 +179,32 @@ evalGenState ret_type (ForInfo (type_, loc, gState, envVarIter, for_body) : stmt
       let newForInfo = (type_, loc, gSt, env', for_body)
       evalGenState ret_type (GenStateStmt (BStmt_T BNFC'NoPosition for_body) : ForInfo newForInfo : stmts)
 
+evalGenState ret_type (GenStateStmt (Break_T pos) : stmts) = do
+  let stmts' = removeWhileFromStack pos stmts
+  evalGenState ret_type stmts'
+
+evalGenState ret_type (GenStateStmt (Continue_T pos) : stmts) = do
+  let stmts' = removeRestOfBlockFromStack pos stmts
+  evalGenState ret_type stmts'
+
 evalGenState ret_type (ReturnToEnv e : stmts) = do
   (_, envProc, envGen) <- ask
   let newEnv = (e, envProc, envGen)
   local (const newEnv) (evalGenState ret_type stmts)
+
+removeRestOfBlockFromStack :: BNFC'Position -> GenState -> GenState
+removeRestOfBlockFromStack pos stmts@(ReturnToEnv e : GenStateStmt While_T {} : _) = stmts
+
+removeRestOfBlockFromStack pos (stmt : stmts) = removeRestOfBlockFromStack pos stmts
+
+removeRestOfBlockFromStack pos _ = makeError "Continue outside while" pos
+
+removeWhileFromStack ::  BNFC'Position -> GenState -> GenState
+removeWhileFromStack pos (ReturnToEnv e : GenStateStmt While_T {} : stmts) = stmts
+
+removeWhileFromStack pos (stmt : stmts) = removeWhileFromStack pos stmts
+
+removeWhileFromStack pos _ = makeError "Break outside while" pos
 
 addArgsToEnvGen :: BNFC'Position -> Env -> [Arg] -> [FunArg] -> RSE Env
 addArgsToEnvGen pos env [] [] = return env
@@ -353,14 +373,15 @@ evalApp pos ident args = do
           case returned of
             Ret val -> do
               if stringTypeOfElit val == stringFunctionType ret
-                then return (Ret val) 
+                then return (Ret val)
                 else makeError "Wrong return type" pos
             NoRet -> do
               if stringFunctionType ret == "void"
-                then return NoRet 
+                then return NoRet
                 else makeError "Missing return statement" pos
             Yield val -> do
               makeError "Yield statement outside generator" pos
+            _ -> undefined -- intended
 
 typeOfRetVal :: RetVal -> Type
 typeOfRetVal (FunRetVal_T _ type_) = type_
@@ -495,7 +516,10 @@ evalStmts ret_type pos (stmt : stmts) = do
       case ret of
         Ret val -> return (Ret val)
         Yield val -> return (Yield val)
+        Break -> return Break
+        Continue -> return Continue
         NoRet -> evalStmts ret_type pos stmts
+
 evalStmts _ pos [] = return NoRet
 
 evalStmt :: BlockRetType -> Stmt -> RSE BlockReturn
@@ -535,8 +559,12 @@ evalStmt ret_type (While_T pos expr block) = do
   val <- getValFromExpr retFromExpr
   case val of
     ELitBool_T _ (ELitTrue_T _) -> do
-      evalBlock ret_type block
-      evalStmt ret_type (While_T pos expr block)
+      ret <- evalBlock ret_type block
+      case ret of
+        Ret val -> return (Ret val)
+        Yield val -> return (Yield val)
+        Break -> return NoRet
+        _ -> evalStmt ret_type (While_T pos expr block) -- no return or continue
     ELitBool_T _ (ELitFalse_T _) -> return NoRet
     _CondType -> makeError "Wrong condition type" pos
 
@@ -551,7 +579,7 @@ evalStmt _ (Ass_T pos ident expr) = do
       case M.lookup loc stVar of
         Just (typ, _) ->
           if stringTypeOfType typ == stringTypeOfElit val
-            then do 
+            then do
               put (M.insert loc (typ, val) stVar, stIter)
             else makeError "Type mismatch" pos
         Nothing -> makeError "Variable not in scope" pos
@@ -587,19 +615,27 @@ evalStmt ret_type (ForGen_T pos identVar identGen args for_body) = do
       put (newStVar, stIter)
       let envVarForBlock = M.insert identVar newLoc envVar
       let envForBlock = (envVarForBlock, envIter)
-      evalFor 
-        ret_type 
-        newLoc 
-        type_ 
-        [GenStateStmt (BStmt_T BNFC'NoPosition block)] 
-        envVarIter 
-        envForBlock 
+      evalFor
+        ret_type
+        newLoc
+        type_
+        [GenStateStmt (BStmt_T BNFC'NoPosition block)]
+        envVarIter
+        envForBlock
         for_body
+
+evalStmt ret_type (Break_T pos) = do
+  return Break
+
+evalStmt ret_type (Continue_T pos) = do
+  return Continue
 
 blockRetToElit :: BlockReturn -> ELit
 blockRetToElit (Yield val) = val
 blockRetToElit (Ret val) = undefined -- intended
 blockRetToElit NoRet = undefined -- intended
+blockRetToElit Break = undefined -- intended
+blockRetToElit Continue = undefined -- intended
 
 evalFor :: BlockRetType -> Loc -> Type -> GenState -> EnvVarIter -> EnvVarIter -> Block -> RSE BlockReturn
 evalFor ret_type loc type_ gState env envForBlock block = do
@@ -618,6 +654,10 @@ evalFor ret_type loc type_ gState env envForBlock block = do
           return (Ret val)
         Yield val -> do
           makeError "Yield statement outside generator" BNFC'NoPosition
+        Break -> do
+          return Break
+        Continue -> do
+          return Continue
         NoRet -> do
           evalFor ret_type loc type_ gSt env' envForBlock block
 
@@ -656,7 +696,7 @@ evalVar :: Var -> RSE Loc
 evalVar (Var_T pos ident) = do
   ((envVar, _envIter), _envProc, envGen) <- ask
   case M.lookup ident envVar of
-    Nothing -> do 
+    Nothing -> do
       makeError ("Variable " ++ getIdentString ident ++ " not in scope") pos
     Just loc -> return loc
 
@@ -665,7 +705,7 @@ getValFromExpr (Ret val) = do
   return val
 getValFromExpr (Yield val) = do
   return val
-getValFromExpr NoRet = makeError "No return value" BNFC'NoPosition
+getValFromExpr _ = makeError "No return value" BNFC'NoPosition
 
 evalExpr :: Expr -> RSE BlockReturn
 evalExpr (EVar_T pos var) = do
@@ -774,6 +814,7 @@ evalExpr (ERel_T pos expr1 relOp expr2) = do
         NE_T _ -> return (Ret (ELitBool_T pos (if val1' /= val2' then ELitTrue_T pos else ELitFalse_T pos)))
         _ -> makeError "Wrong operation argument" pos
     _ -> makeError "Wrong operation argument" pos
+
 evalExpr (ECast_T pos type_ expr) = do
   retFromExpr <- evalExpr expr
   val <- getValFromExpr retFromExpr
@@ -800,12 +841,14 @@ evalExpr (ECast_T pos type_ expr) = do
     (ELitBool_T _ val', Bool_T _) -> return (Ret val)
     (EString_T _ val', Str_T _) -> return (Ret val)
     _wrong_type -> makeError "Wrong cast argument" pos
+
 evalExpr (App_T pos ident args) = do
   ret <- evalApp pos ident args
   case ret of
     Ret val -> return (Ret val)
     NoRet -> return NoRet
     Yield _ -> makeError "Unexpected yield" pos
+    _ -> undefined -- intended
 
 evalExpr (EGenNext_T pos ident) = do
   ret <- evalGenNext pos ident
@@ -813,6 +856,7 @@ evalExpr (EGenNext_T pos ident) = do
     Yield val -> return (Ret val)
     NoRet -> makeError "Unexpected end of generator" pos
     Ret _ -> makeError "Unexpected return" pos
+    _ -> undefined -- intended
 
 initialEnvVarIter :: EnvVarIter
 initialEnvVarIter = (M.empty, M.empty)

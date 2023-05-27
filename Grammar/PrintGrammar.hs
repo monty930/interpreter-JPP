@@ -180,6 +180,8 @@ instance Print (AbsGrammar.Stmt' a) where
     AbsGrammar.Ass_T _ id_ expr -> prPrec i 0 (concatD [prt 0 id_, doc (showString "="), prt 0 expr, doc (showString ";")])
     AbsGrammar.Incr_T _ id_ -> prPrec i 0 (concatD [prt 0 id_, doc (showString "++"), doc (showString ";")])
     AbsGrammar.Decr_T _ id_ -> prPrec i 0 (concatD [prt 0 id_, doc (showString "--"), doc (showString ";")])
+    AbsGrammar.Break_T _ -> prPrec i 0 (concatD [doc (showString "break"), doc (showString ";")])
+    AbsGrammar.Continue_T _ -> prPrec i 0 (concatD [doc (showString "continue"), doc (showString ";")])
     AbsGrammar.Cond_T _ expr block -> prPrec i 0 (concatD [doc (showString "if"), doc (showString "("), prt 0 expr, doc (showString ")"), prt 0 block])
     AbsGrammar.CondElse_T _ expr block1 block2 -> prPrec i 0 (concatD [doc (showString "if"), doc (showString "("), prt 0 expr, doc (showString ")"), prt 0 block1, doc (showString "else"), prt 0 block2])
     AbsGrammar.While_T _ expr block -> prPrec i 0 (concatD [doc (showString "while"), doc (showString "("), prt 0 expr, doc (showString ")"), prt 0 block])
