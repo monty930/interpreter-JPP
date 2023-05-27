@@ -159,7 +159,7 @@ instance Print [AbsGrammar.TopDef' a] where
 instance Print (AbsGrammar.Arg' a) where
   prt i = \case
     AbsGrammar.Arg_T _ type_ id_ -> prPrec i 0 (concatD [prt 0 type_, prt 0 id_])
-    AbsGrammar.ArgList_T _ id_ -> prPrec i 0 (concatD [doc (showString "list"), prt 0 id_])
+    AbsGrammar.ArgList_T _ type_ id_ -> prPrec i 0 (concatD [doc (showString "list"), prt 0 type_, prt 0 id_])
 
 instance Print [AbsGrammar.Arg' a] where
   prt _ [] = concatD []

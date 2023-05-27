@@ -8,7 +8,7 @@ GlobVar_T.      TopDef ::= "Glob" Type Ident "=" Expr ";" ;
 Gener_T.        TopDef ::= "Gen" Type Ident "(" [Arg] ")" Block ;
 separator       TopDef "" ;
 Arg_T. 	        Arg ::= Type Ident ;
-ArgList_T. 	    Arg ::= "list" Ident ;
+ArgList_T. 	    Arg ::= "list" Type Ident ;
 separator       Arg "," ;
 -- statements ----------------------------------------------
 Block_T.        Block ::= "{" [Stmt] "}" ;

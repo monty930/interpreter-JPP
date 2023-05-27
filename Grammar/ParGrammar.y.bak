@@ -38,43 +38,44 @@ import LexGrammar
   '-'        { PT _ (TS _ 13) }
   '--'       { PT _ (TS _ 14) }
   '.add'     { PT _ (TS _ 15) }
-  '.pop'     { PT _ (TS _ 16) }
-  '.push'    { PT _ (TS _ 17) }
-  '.remove'  { PT _ (TS _ 18) }
-  '/'        { PT _ (TS _ 19) }
-  ';'        { PT _ (TS _ 20) }
-  '<'        { PT _ (TS _ 21) }
-  '<='       { PT _ (TS _ 22) }
-  '='        { PT _ (TS _ 23) }
-  '=='       { PT _ (TS _ 24) }
-  '>'        { PT _ (TS _ 25) }
-  '>='       { PT _ (TS _ 26) }
-  'Gen'      { PT _ (TS _ 27) }
-  'Glob'     { PT _ (TS _ 28) }
-  'Proc'     { PT _ (TS _ 29) }
-  '['        { PT _ (TS _ 30) }
-  ']'        { PT _ (TS _ 31) }
-  'bool'     { PT _ (TS _ 32) }
-  'break'    { PT _ (TS _ 33) }
-  'char'     { PT _ (TS _ 34) }
-  'continue' { PT _ (TS _ 35) }
-  'else'     { PT _ (TS _ 36) }
-  'false'    { PT _ (TS _ 37) }
-  'for'      { PT _ (TS _ 38) }
-  'gen'      { PT _ (TS _ 39) }
-  'if'       { PT _ (TS _ 40) }
-  'in'       { PT _ (TS _ 41) }
-  'int'      { PT _ (TS _ 42) }
-  'list'     { PT _ (TS _ 43) }
-  'next'     { PT _ (TS _ 44) }
-  'return'   { PT _ (TS _ 45) }
-  'string'   { PT _ (TS _ 46) }
-  'true'     { PT _ (TS _ 47) }
-  'while'    { PT _ (TS _ 48) }
-  'yield'    { PT _ (TS _ 49) }
-  '{'        { PT _ (TS _ 50) }
-  '||'       { PT _ (TS _ 51) }
-  '}'        { PT _ (TS _ 52) }
+  '.len'     { PT _ (TS _ 16) }
+  '.pop'     { PT _ (TS _ 17) }
+  '.push'    { PT _ (TS _ 18) }
+  '.remove'  { PT _ (TS _ 19) }
+  '/'        { PT _ (TS _ 20) }
+  ';'        { PT _ (TS _ 21) }
+  '<'        { PT _ (TS _ 22) }
+  '<='       { PT _ (TS _ 23) }
+  '='        { PT _ (TS _ 24) }
+  '=='       { PT _ (TS _ 25) }
+  '>'        { PT _ (TS _ 26) }
+  '>='       { PT _ (TS _ 27) }
+  'Gen'      { PT _ (TS _ 28) }
+  'Glob'     { PT _ (TS _ 29) }
+  'Proc'     { PT _ (TS _ 30) }
+  '['        { PT _ (TS _ 31) }
+  ']'        { PT _ (TS _ 32) }
+  'bool'     { PT _ (TS _ 33) }
+  'break'    { PT _ (TS _ 34) }
+  'char'     { PT _ (TS _ 35) }
+  'continue' { PT _ (TS _ 36) }
+  'else'     { PT _ (TS _ 37) }
+  'false'    { PT _ (TS _ 38) }
+  'for'      { PT _ (TS _ 39) }
+  'gen'      { PT _ (TS _ 40) }
+  'if'       { PT _ (TS _ 41) }
+  'in'       { PT _ (TS _ 42) }
+  'int'      { PT _ (TS _ 43) }
+  'list'     { PT _ (TS _ 44) }
+  'next'     { PT _ (TS _ 45) }
+  'return'   { PT _ (TS _ 46) }
+  'string'   { PT _ (TS _ 47) }
+  'true'     { PT _ (TS _ 48) }
+  'while'    { PT _ (TS _ 49) }
+  'yield'    { PT _ (TS _ 50) }
+  '{'        { PT _ (TS _ 51) }
+  '||'       { PT _ (TS _ 52) }
+  '}'        { PT _ (TS _ 53) }
   L_Ident    { PT _ (TV _)    }
   L_charac   { PT _ (TC _)    }
   L_integ    { PT _ (TI _)    }
@@ -101,6 +102,7 @@ Program
 TopDef :: { (AbsGrammar.BNFC'Position, AbsGrammar.TopDef) }
 TopDef
   : RetVal Ident '(' ListArg ')' ';' { (fst $1, AbsGrammar.ProcDecl_T (fst $1) (snd $1) (snd $2) (snd $4)) }
+  | 'list' Type Ident '=' '[' ListExpr ']' ';' { (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1), AbsGrammar.ListGlobDecl_T (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1)) (snd $2) (snd $3) (snd $6)) }
   | RetVal Ident '(' ListArg ')' Block { (fst $1, AbsGrammar.ProcDef_T (fst $1) (snd $1) (snd $2) (snd $4) (snd $6)) }
   | 'Glob' Type Ident '=' Expr ';' { (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1), AbsGrammar.GlobVar_T (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1)) (snd $2) (snd $3) (snd $5)) }
   | 'Gen' Type Ident '(' ListArg ')' Block { (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1), AbsGrammar.Gener_T (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1)) (snd $2) (snd $3) (snd $5) (snd $7)) }
@@ -174,6 +176,7 @@ Expr7
   : Ident '[' Expr ']' { (fst $1, AbsGrammar.EListElem_T (fst $1) (snd $1) (snd $3)) }
   | Var { (fst $1, AbsGrammar.EVar_T (fst $1) (snd $1)) }
   | ELit { (fst $1, AbsGrammar.ELit_T (fst $1) (snd $1)) }
+  | Ident '.len' { (fst $1, AbsGrammar.EListLen_T (fst $1) (snd $1)) }
   | Ident '(' ListFunArg ')' { (fst $1, AbsGrammar.App_T (fst $1) (snd $1) (snd $3)) }
   | '(' Expr ')' { (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1), (snd $2)) }
 

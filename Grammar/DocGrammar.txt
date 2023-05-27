@@ -69,7 +69,7 @@ All other symbols are terminals.
   | //[TopDef]// | -> | **eps**
   |  |  **|**  | //TopDef// //[TopDef]//
   | //Arg// | -> | //Type// //Ident//
-  |  |  **|**  | ``list`` //Ident//
+  |  |  **|**  | ``list`` //Type// //Ident//
   | //[Arg]// | -> | **eps**
   |  |  **|**  | //Arg//
   |  |  **|**  | //Arg// ``,`` //[Arg]//

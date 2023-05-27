@@ -115,7 +115,7 @@ ListTopDef
 Arg :: { (AbsGrammar.BNFC'Position, AbsGrammar.Arg) }
 Arg
   : Type Ident { (fst $1, AbsGrammar.Arg_T (fst $1) (snd $1) (snd $2)) }
-  | 'list' Ident { (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1), AbsGrammar.ArgList_T (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1)) (snd $2)) }
+  | 'list' Type Ident { (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1), AbsGrammar.ArgList_T (uncurry AbsGrammar.BNFC'Position (tokenLineCol $1)) (snd $2) (snd $3)) }
 
 ListArg :: { (AbsGrammar.BNFC'Position, [AbsGrammar.Arg]) }
 ListArg

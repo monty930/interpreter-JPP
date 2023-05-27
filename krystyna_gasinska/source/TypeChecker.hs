@@ -417,7 +417,7 @@ checkStmt ret_type _can_break (PushToList_T pos ident expr) = do
         Just loc -> case M.lookup loc stList of
             Nothing -> do
                 makeTypeError ("Variable " ++ getIdentString ident ++ " undefined") pos
-            Just type_ -> 
+            Just type_ ->
                 if stringTypeOfType (typeTToType type_) == stringTypeOfType typeExpr'
                     then return ()
                     else makeTypeError
@@ -435,10 +435,10 @@ checkStmt ret_type _can_break (PopFromList_T pos ident) = do
     case M.lookup ident envList of
         Nothing -> do
             makeTypeError ("Variable " ++ getIdentString ident ++ " undefined") pos
-        Just loc -> case M.lookup loc stList of 
+        Just loc -> case M.lookup loc stList of
             Nothing -> do
                 makeTypeError ("Variable " ++ getIdentString ident ++ " undefined") pos
-            Just type_ -> 
+            Just type_ ->
                 return ()
 
 checkStmt ret_type _can_break (AddToList_T pos ident expr1 expr2) = do
@@ -452,17 +452,17 @@ checkStmt ret_type _can_break (AddToList_T pos ident expr1 expr2) = do
         Just loc -> case M.lookup loc stList of
             Nothing -> do
                 makeTypeError ("Variable " ++ getIdentString ident ++ " undefined") pos
-            Just type_ -> 
+            Just type_ ->
                 if stringTypeOfType (typeTToType type_) == stringTypeOfType typeExpr'
                     then return ()
-                    else do 
+                    else do
                         typeExpr1 <- checkExpr expr1
                         let typeExpr1' = typeTToType typeExpr1
                         if "int" == stringTypeOfType typeExpr'
                             then return ()
                             else makeTypeError "Index type mismatch" pos
 
-checkStmt ret_type _can_break (RemoveFromList_T pos ident expr) = do 
+checkStmt ret_type _can_break (RemoveFromList_T pos ident expr) = do
     ((envVar, envIter, envList), envProc, envGen) <- ask
     (storeVar, storeIter, stList) <- get
     typeExpr <- checkExpr expr
@@ -473,11 +473,11 @@ checkStmt ret_type _can_break (RemoveFromList_T pos ident expr) = do
         Just loc -> case M.lookup loc stList of
             Nothing -> do
                 makeTypeError ("Variable " ++ getIdentString ident ++ " undefined") pos
-            Just type_ -> 
+            Just type_ ->
                 if "int" == stringTypeOfType typeExpr'
                     then return ()
                     else makeTypeError "Index type mismatch" pos
-    
+
 
 blockRetToTypeReturn :: BNFC'Position -> BlockRetType -> RSET TypeT
 blockRetToTypeReturn pos (RetType type_) = return (toTypeT type_)
@@ -690,8 +690,8 @@ checkExpr (App_T pos ident funargs) = do
                         ("Function " ++
                         getIdentString ident ++
                         " not declared") pos
-        Just (type_, argsTypes, _) -> do
-            checkArgs pos funargs argsTypes
+        Just (type_, argTypes, _) -> do
+            checkArgs pos funargs argTypes
             return type_
 
 checkExpr (EListElem_T pos ident expr) = do
@@ -699,13 +699,13 @@ checkExpr (EListElem_T pos ident expr) = do
     (storeVar, storeIter, stList) <- get
     typeExpr <- checkExpr expr
     let typeExpr' = typeTToType typeExpr
-    case M.lookup ident envList of 
+    case M.lookup ident envList of
         Nothing -> do
             makeTypeError ("Variable " ++ getIdentString ident ++ " undefined") pos
         Just loc -> case M.lookup loc stList of
             Nothing -> do
                 makeTypeError ("Variable " ++ getIdentString ident ++ " undefined") pos
-            Just type_ -> 
+            Just type_ ->
                 if "int" == stringTypeOfType typeExpr'
                     then return type_
                     else makeTypeError "Index type mismatch" pos
@@ -713,13 +713,13 @@ checkExpr (EListElem_T pos ident expr) = do
 checkExpr (EListLen_T pos ident) = do
     ((envVar, envIter, envList), envProc, envGen) <- ask
     (storeVar, storeIter, stList) <- get
-    case M.lookup ident envList of 
+    case M.lookup ident envList of
         Nothing -> do
             makeTypeError ("Variable " ++ getIdentString ident ++ " undefined") pos
         Just loc -> case M.lookup loc stList of
             Nothing -> do
                 makeTypeError ("Variable " ++ getIdentString ident ++ " undefined") pos
-            Just type_ -> 
+            Just type_ ->
                 return IntT
 
 checkArgs :: BNFC'Position -> [FunArg] -> [TypeT] -> RSET ()

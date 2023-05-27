@@ -34,7 +34,7 @@ transTopDef x = case x of
 transArg :: Show a => AbsGrammar.Arg' a -> Result
 transArg x = case x of
   AbsGrammar.Arg_T _ type_ ident -> failure x
-  AbsGrammar.ArgList_T _ ident -> failure x
+  AbsGrammar.ArgList_T _ type_ ident -> failure x
 
 transBlock :: Show a => AbsGrammar.Block' a -> Result
 transBlock x = case x of

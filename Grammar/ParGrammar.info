@@ -20,7 +20,7 @@ Grammar
 	ListTopDef ->                                      (11)
 	ListTopDef -> TopDef ListTopDef                    (12)
 	Arg -> Type Ident                                  (13)
-	Arg -> 'list' Ident                                (14)
+	Arg -> 'list' Type Ident                           (14)
 	ListArg ->                                         (15)
 	ListArg -> Arg                                     (16)
 	ListArg -> Arg ',' ListArg                         (17)
@@ -540,19 +540,22 @@ State 30
 
 State 31
 
-	Arg -> 'list' . Ident                               (rule 14)
+	Arg -> 'list' . Type Ident                          (rule 14)
 
-	L_Ident        shift, and enter state 2
+	'bool'         shift, and enter state 11
+	'char'         shift, and enter state 12
+	'int'          shift, and enter state 13
+	'string'       shift, and enter state 15
 
-	Ident          goto state 32
+	Type           goto state 32
 
 State 32
 
-	Arg -> 'list' Ident .                               (rule 14)
+	Arg -> 'list' Type . Ident                          (rule 14)
 
-	')'            reduce using rule 14
-	','            reduce using rule 14
+	L_Ident        shift, and enter state 2
 
+	Ident          goto state 95
 
 State 33
 
@@ -1162,7 +1165,7 @@ State 62
 	ListExpr -> Expr .                                  (rule 83)
 	ListExpr -> Expr . ',' ListExpr                     (rule 84)
 
-	','            shift, and enter state 126
+	','            shift, and enter state 127
 	']'            reduce using rule 83
 
 
@@ -1170,7 +1173,7 @@ State 63
 
 	TopDef -> 'list' Type Ident '=' '[' ListExpr . ']' ';'    (rule 7)
 
-	']'            shift, and enter state 125
+	']'            shift, and enter state 126
 
 
 State 64
@@ -1179,7 +1182,7 @@ State 64
 
 	L_Ident        shift, and enter state 2
 
-	Ident          goto state 124
+	Ident          goto state 125
 
 State 65
 
@@ -1240,14 +1243,14 @@ State 67
 
 	Expr6 -> '(' Type . ')' Expr6                       (rule 68)
 
-	')'            shift, and enter state 123
+	')'            shift, and enter state 124
 
 
 State 68
 
 	Expr7 -> '(' Expr . ')'                             (rule 54)
 
-	')'            shift, and enter state 122
+	')'            shift, and enter state 123
 
 
 State 69
@@ -1317,7 +1320,7 @@ State 71
 	Expr4          goto state 47
 	Expr3          goto state 48
 	Expr2          goto state 49
-	Expr1          goto state 121
+	Expr1          goto state 122
 
 State 72
 
@@ -1344,7 +1347,7 @@ State 72
 	EBool          goto state 44
 	Expr6          goto state 45
 	Expr5          goto state 46
-	Expr4          goto state 120
+	Expr4          goto state 121
 
 State 73
 
@@ -1389,7 +1392,7 @@ State 74
 	Expr5          goto state 46
 	Expr4          goto state 47
 	Expr3          goto state 48
-	Expr2          goto state 119
+	Expr2          goto state 120
 
 State 75
 
@@ -1495,7 +1498,7 @@ State 80
 	ELit           goto state 43
 	EBool          goto state 44
 	Expr6          goto state 45
-	Expr5          goto state 118
+	Expr5          goto state 119
 
 State 81
 
@@ -1552,7 +1555,7 @@ State 83
 	Expr7          goto state 42
 	ELit           goto state 43
 	EBool          goto state 44
-	Expr6          goto state 117
+	Expr6          goto state 118
 
 State 84
 
@@ -1607,7 +1610,7 @@ State 87
 	Expr7 -> Ident '(' . ListFunArg ')'                 (rule 53)
 
 	'!'            shift, and enter state 52
-	'&'            shift, and enter state 116
+	'&'            shift, and enter state 117
 	'('            shift, and enter state 53
 	')'            reduce using rule 63
 	'-'            shift, and enter state 54
@@ -1627,15 +1630,15 @@ State 87
 	Expr7          goto state 42
 	ELit           goto state 43
 	EBool          goto state 44
-	FunArg         goto state 113
-	ListFunArg     goto state 114
+	FunArg         goto state 114
+	ListFunArg     goto state 115
 	Expr6          goto state 45
 	Expr5          goto state 46
 	Expr4          goto state 47
 	Expr3          goto state 48
 	Expr2          goto state 49
 	Expr1          goto state 50
-	Expr           goto state 115
+	Expr           goto state 116
 
 State 88
 
@@ -1690,7 +1693,7 @@ State 89
 	Expr3          goto state 48
 	Expr2          goto state 49
 	Expr1          goto state 50
-	Expr           goto state 112
+	Expr           goto state 113
 
 State 90
 
@@ -1698,7 +1701,7 @@ State 90
 
 	'{'            shift, and enter state 94
 
-	Block          goto state 111
+	Block          goto state 112
 
 State 91
 
@@ -1744,23 +1747,23 @@ State 94
 	'!'            shift, and enter state 52
 	'('            shift, and enter state 53
 	'-'            shift, and enter state 54
-	';'            shift, and enter state 101
+	';'            shift, and enter state 102
 	'bool'         shift, and enter state 11
-	'break'        shift, and enter state 102
+	'break'        shift, and enter state 103
 	'char'         shift, and enter state 12
-	'continue'     shift, and enter state 103
+	'continue'     shift, and enter state 104
 	'false'        shift, and enter state 55
-	'for'          shift, and enter state 104
-	'gen'          shift, and enter state 105
-	'if'           shift, and enter state 106
+	'for'          shift, and enter state 105
+	'gen'          shift, and enter state 106
+	'if'           shift, and enter state 107
 	'int'          shift, and enter state 13
-	'list'         shift, and enter state 107
+	'list'         shift, and enter state 108
 	'next'         shift, and enter state 56
-	'return'       shift, and enter state 108
+	'return'       shift, and enter state 109
 	'string'       shift, and enter state 15
 	'true'         shift, and enter state 57
-	'while'        shift, and enter state 109
-	'yield'        shift, and enter state 110
+	'while'        shift, and enter state 110
+	'yield'        shift, and enter state 111
 	'{'            shift, and enter state 94
 	'}'            reduce using rule 19
 	L_Ident        shift, and enter state 2
@@ -1768,14 +1771,14 @@ State 94
 	L_integ        shift, and enter state 59
 	L_quoted       shift, and enter state 60
 
-	Ident          goto state 95
+	Ident          goto state 96
 	Char           goto state 38
 	Integer        goto state 39
 	String         goto state 40
-	Block          goto state 96
-	ListStmt       goto state 97
-	Stmt           goto state 98
-	Type           goto state 99
+	Block          goto state 97
+	ListStmt       goto state 98
+	Stmt           goto state 99
+	Type           goto state 100
 	Var            goto state 41
 	Expr7          goto state 42
 	ELit           goto state 43
@@ -1786,9 +1789,17 @@ State 94
 	Expr3          goto state 48
 	Expr2          goto state 49
 	Expr1          goto state 50
-	Expr           goto state 100
+	Expr           goto state 101
 
 State 95
+
+	Arg -> 'list' Type Ident .                          (rule 14)
+
+	')'            reduce using rule 14
+	','            reduce using rule 14
+
+
+State 96
 
 	Stmt -> Ident . '=' Expr ';'                        (rule 24)
 	Stmt -> Ident . '++' ';'                            (rule 25)
@@ -1808,19 +1819,19 @@ State 95
 	'('            shift, and enter state 87
 	'*'            reduce using rule 48
 	'+'            reduce using rule 48
-	'++'           shift, and enter state 149
+	'++'           shift, and enter state 150
 	'-'            reduce using rule 48
-	'--'           shift, and enter state 150
-	'.add'         shift, and enter state 151
+	'--'           shift, and enter state 151
+	'.add'         shift, and enter state 152
 	'.len'         shift, and enter state 88
-	'.pop'         shift, and enter state 152
-	'.push'        shift, and enter state 153
-	'.remove'      shift, and enter state 154
+	'.pop'         shift, and enter state 153
+	'.push'        shift, and enter state 154
+	'.remove'      shift, and enter state 155
 	'/'            reduce using rule 48
 	';'            reduce using rule 48
 	'<'            reduce using rule 48
 	'<='           reduce using rule 48
-	'='            shift, and enter state 155
+	'='            shift, and enter state 156
 	'=='           reduce using rule 48
 	'>'            reduce using rule 48
 	'>='           reduce using rule 48
@@ -1828,7 +1839,7 @@ State 95
 	'||'           reduce using rule 48
 
 
-State 96
+State 97
 
 	Stmt -> Block .                                     (rule 22)
 
@@ -1860,37 +1871,37 @@ State 96
 	L_quoted       reduce using rule 22
 
 
-State 97
+State 98
 
 	Block -> '{' ListStmt . '}'                         (rule 18)
 
-	'}'            shift, and enter state 148
+	'}'            shift, and enter state 149
 
 
-State 98
+State 99
 
 	ListStmt -> Stmt . ListStmt                         (rule 20)
 
 	'!'            shift, and enter state 52
 	'('            shift, and enter state 53
 	'-'            shift, and enter state 54
-	';'            shift, and enter state 101
+	';'            shift, and enter state 102
 	'bool'         shift, and enter state 11
-	'break'        shift, and enter state 102
+	'break'        shift, and enter state 103
 	'char'         shift, and enter state 12
-	'continue'     shift, and enter state 103
+	'continue'     shift, and enter state 104
 	'false'        shift, and enter state 55
-	'for'          shift, and enter state 104
-	'gen'          shift, and enter state 105
-	'if'           shift, and enter state 106
+	'for'          shift, and enter state 105
+	'gen'          shift, and enter state 106
+	'if'           shift, and enter state 107
 	'int'          shift, and enter state 13
-	'list'         shift, and enter state 107
+	'list'         shift, and enter state 108
 	'next'         shift, and enter state 56
-	'return'       shift, and enter state 108
+	'return'       shift, and enter state 109
 	'string'       shift, and enter state 15
 	'true'         shift, and enter state 57
-	'while'        shift, and enter state 109
-	'yield'        shift, and enter state 110
+	'while'        shift, and enter state 110
+	'yield'        shift, and enter state 111
 	'{'            shift, and enter state 94
 	'}'            reduce using rule 19
 	L_Ident        shift, and enter state 2
@@ -1898,14 +1909,14 @@ State 98
 	L_integ        shift, and enter state 59
 	L_quoted       shift, and enter state 60
 
-	Ident          goto state 95
+	Ident          goto state 96
 	Char           goto state 38
 	Integer        goto state 39
 	String         goto state 40
-	Block          goto state 96
-	ListStmt       goto state 147
-	Stmt           goto state 98
-	Type           goto state 99
+	Block          goto state 97
+	ListStmt       goto state 148
+	Stmt           goto state 99
+	Type           goto state 100
 	Var            goto state 41
 	Expr7          goto state 42
 	ELit           goto state 43
@@ -1916,24 +1927,24 @@ State 98
 	Expr3          goto state 48
 	Expr2          goto state 49
 	Expr1          goto state 50
-	Expr           goto state 100
+	Expr           goto state 101
 
-State 99
+State 100
 
 	Stmt -> Type . Ident '=' Expr ';'                   (rule 23)
 
 	L_Ident        shift, and enter state 2
 
-	Ident          goto state 146
+	Ident          goto state 147
 
-State 100
+State 101
 
 	Stmt -> Expr . ';'                                  (rule 41)
 
-	';'            shift, and enter state 145
+	';'            shift, and enter state 146
 
 
-State 101
+State 102
 
 	Stmt -> ';' .                                       (rule 21)
 
@@ -1965,44 +1976,44 @@ State 101
 	L_quoted       reduce using rule 21
 
 
-State 102
+State 103
 
 	Stmt -> 'break' . ';'                               (rule 27)
 
-	';'            shift, and enter state 144
-
-
-State 103
-
-	Stmt -> 'continue' . ';'                            (rule 28)
-
-	';'            shift, and enter state 143
+	';'            shift, and enter state 145
 
 
 State 104
 
-	Stmt -> 'for' . '(' Ident 'in' Ident '(' ListFunArg ')' ')' Block    (rule 35)
+	Stmt -> 'continue' . ';'                            (rule 28)
 
-	'('            shift, and enter state 142
+	';'            shift, and enter state 144
 
 
 State 105
+
+	Stmt -> 'for' . '(' Ident 'in' Ident '(' ListFunArg ')' ')' Block    (rule 35)
+
+	'('            shift, and enter state 143
+
+
+State 106
 
 	Stmt -> 'gen' . Ident '=' Ident '(' ListFunArg ')' ';'    (rule 34)
 
 	L_Ident        shift, and enter state 2
 
-	Ident          goto state 141
+	Ident          goto state 142
 
-State 106
+State 107
 
 	Stmt -> 'if' . '(' Expr ')' Block                   (rule 29)
 	Stmt -> 'if' . '(' Expr ')' Block 'else' Block      (rule 30)
 
-	'('            shift, and enter state 140
+	'('            shift, and enter state 141
 
 
-State 107
+State 108
 
 	Stmt -> 'list' . Type Ident '=' '[' ListExpr ']' ';'    (rule 36)
 
@@ -2011,30 +2022,30 @@ State 107
 	'int'          shift, and enter state 13
 	'string'       shift, and enter state 15
 
-	Type           goto state 139
-
-State 108
-
-	Stmt -> 'return' . '(' Expr ')'                     (rule 32)
-
-	'('            shift, and enter state 138
-
+	Type           goto state 140
 
 State 109
 
-	Stmt -> 'while' . '(' Expr ')' Block                (rule 31)
+	Stmt -> 'return' . '(' Expr ')'                     (rule 32)
 
-	'('            shift, and enter state 137
+	'('            shift, and enter state 139
 
 
 State 110
 
-	Stmt -> 'yield' . '(' Expr ')'                      (rule 33)
+	Stmt -> 'while' . '(' Expr ')' Block                (rule 31)
 
-	'('            shift, and enter state 136
+	'('            shift, and enter state 138
 
 
 State 111
+
+	Stmt -> 'yield' . '(' Expr ')'                      (rule 33)
+
+	'('            shift, and enter state 137
+
+
+State 112
 
 	TopDef -> 'Gen' Type Ident '(' ListArg ')' Block .    (rule 10)
 
@@ -2049,30 +2060,30 @@ State 111
 	%eof           reduce using rule 10
 
 
-State 112
+State 113
 
 	Expr7 -> Ident '[' Expr . ']'                       (rule 49)
 
-	']'            shift, and enter state 135
+	']'            shift, and enter state 136
 
 
-State 113
+State 114
 
 	ListFunArg -> FunArg .                              (rule 64)
 	ListFunArg -> FunArg . ',' ListFunArg               (rule 65)
 
 	')'            reduce using rule 64
-	','            shift, and enter state 134
-
-
-State 114
-
-	Expr7 -> Ident '(' ListFunArg . ')'                 (rule 53)
-
-	')'            shift, and enter state 133
+	','            shift, and enter state 135
 
 
 State 115
+
+	Expr7 -> Ident '(' ListFunArg . ')'                 (rule 53)
+
+	')'            shift, and enter state 134
+
+
+State 116
 
 	FunArg -> Expr .                                    (rule 61)
 
@@ -2080,16 +2091,16 @@ State 115
 	','            reduce using rule 61
 
 
-State 116
+State 117
 
 	FunArg -> '&' . Var                                 (rule 62)
 
 	L_Ident        shift, and enter state 2
 
-	Ident          goto state 131
-	Var            goto state 132
+	Ident          goto state 132
+	Var            goto state 133
 
-State 117
+State 118
 
 	Expr5 -> Expr5 MulOp Expr6 .                        (rule 71)
 
@@ -2113,7 +2124,7 @@ State 117
 	'||'           reduce using rule 71
 
 
-State 118
+State 119
 
 	Expr5 -> Expr5 . MulOp Expr6                        (rule 71)
 	Expr4 -> Expr4 AddOp Expr5 .                        (rule 73)
@@ -2139,7 +2150,7 @@ State 118
 
 	MulOp          goto state 83
 
-State 119
+State 120
 
 	Expr2 -> Expr3 '&&' Expr2 .                         (rule 77)
 
@@ -2151,7 +2162,7 @@ State 119
 	'||'           reduce using rule 77
 
 
-State 120
+State 121
 
 	Expr4 -> Expr4 . AddOp Expr5                        (rule 73)
 	Expr3 -> Expr3 RelOp Expr4 .                        (rule 75)
@@ -2174,7 +2185,7 @@ State 120
 
 	AddOp          goto state 80
 
-State 121
+State 122
 
 	Expr1 -> Expr2 '||' Expr1 .                         (rule 79)
 
@@ -2185,7 +2196,7 @@ State 121
 	']'            reduce using rule 79
 
 
-State 122
+State 123
 
 	Expr7 -> '(' Expr ')' .                             (rule 54)
 
@@ -2209,7 +2220,7 @@ State 122
 	'||'           reduce using rule 54
 
 
-State 123
+State 124
 
 	Expr6 -> '(' Type ')' . Expr6                       (rule 68)
 
@@ -2232,23 +2243,23 @@ State 123
 	Expr7          goto state 42
 	ELit           goto state 43
 	EBool          goto state 44
-	Expr6          goto state 130
-
-State 124
-
-	Expr6 -> 'next' '(' Ident . ')'                     (rule 69)
-
-	')'            shift, and enter state 129
-
+	Expr6          goto state 131
 
 State 125
 
-	TopDef -> 'list' Type Ident '=' '[' ListExpr ']' . ';'    (rule 7)
+	Expr6 -> 'next' '(' Ident . ')'                     (rule 69)
 
-	';'            shift, and enter state 128
+	')'            shift, and enter state 130
 
 
 State 126
+
+	TopDef -> 'list' Type Ident '=' '[' ListExpr ']' . ';'    (rule 7)
+
+	';'            shift, and enter state 129
+
+
+State 127
 
 	ListExpr -> Expr ',' . ListExpr                     (rule 84)
 
@@ -2279,16 +2290,16 @@ State 126
 	Expr2          goto state 49
 	Expr1          goto state 50
 	Expr           goto state 62
-	ListExpr       goto state 127
+	ListExpr       goto state 128
 
-State 127
+State 128
 
 	ListExpr -> Expr ',' ListExpr .                     (rule 84)
 
 	']'            reduce using rule 84
 
 
-State 128
+State 129
 
 	TopDef -> 'list' Type Ident '=' '[' ListExpr ']' ';' .    (rule 7)
 
@@ -2303,7 +2314,7 @@ State 128
 	%eof           reduce using rule 7
 
 
-State 129
+State 130
 
 	Expr6 -> 'next' '(' Ident ')' .                     (rule 69)
 
@@ -2327,7 +2338,7 @@ State 129
 	'||'           reduce using rule 69
 
 
-State 130
+State 131
 
 	Expr6 -> '(' Type ')' Expr6 .                       (rule 68)
 
@@ -2351,7 +2362,7 @@ State 130
 	'||'           reduce using rule 68
 
 
-State 131
+State 132
 
 	Var -> Ident .                                      (rule 48)
 
@@ -2359,7 +2370,7 @@ State 131
 	','            reduce using rule 48
 
 
-State 132
+State 133
 
 	FunArg -> '&' Var .                                 (rule 62)
 
@@ -2367,7 +2378,7 @@ State 132
 	','            reduce using rule 62
 
 
-State 133
+State 134
 
 	Expr7 -> Ident '(' ListFunArg ')' .                 (rule 53)
 
@@ -2391,12 +2402,12 @@ State 133
 	'||'           reduce using rule 53
 
 
-State 134
+State 135
 
 	ListFunArg -> FunArg ',' . ListFunArg               (rule 65)
 
 	'!'            shift, and enter state 52
-	'&'            shift, and enter state 116
+	'&'            shift, and enter state 117
 	'('            shift, and enter state 53
 	')'            reduce using rule 63
 	'-'            shift, and enter state 54
@@ -2416,17 +2427,17 @@ State 134
 	Expr7          goto state 42
 	ELit           goto state 43
 	EBool          goto state 44
-	FunArg         goto state 113
-	ListFunArg     goto state 171
+	FunArg         goto state 114
+	ListFunArg     goto state 172
 	Expr6          goto state 45
 	Expr5          goto state 46
 	Expr4          goto state 47
 	Expr3          goto state 48
 	Expr2          goto state 49
 	Expr1          goto state 50
-	Expr           goto state 115
+	Expr           goto state 116
 
-State 135
+State 136
 
 	Expr7 -> Ident '[' Expr ']' .                       (rule 49)
 
@@ -2450,7 +2461,7 @@ State 135
 	'||'           reduce using rule 49
 
 
-State 136
+State 137
 
 	Stmt -> 'yield' '(' . Expr ')'                      (rule 33)
 
@@ -2479,9 +2490,9 @@ State 136
 	Expr3          goto state 48
 	Expr2          goto state 49
 	Expr1          goto state 50
-	Expr           goto state 170
+	Expr           goto state 171
 
-State 137
+State 138
 
 	Stmt -> 'while' '(' . Expr ')' Block                (rule 31)
 
@@ -2510,9 +2521,9 @@ State 137
 	Expr3          goto state 48
 	Expr2          goto state 49
 	Expr1          goto state 50
-	Expr           goto state 169
+	Expr           goto state 170
 
-State 138
+State 139
 
 	Stmt -> 'return' '(' . Expr ')'                     (rule 32)
 
@@ -2541,17 +2552,17 @@ State 138
 	Expr3          goto state 48
 	Expr2          goto state 49
 	Expr1          goto state 50
-	Expr           goto state 168
+	Expr           goto state 169
 
-State 139
+State 140
 
 	Stmt -> 'list' Type . Ident '=' '[' ListExpr ']' ';'    (rule 36)
 
 	L_Ident        shift, and enter state 2
 
-	Ident          goto state 167
+	Ident          goto state 168
 
-State 140
+State 141
 
 	Stmt -> 'if' '(' . Expr ')' Block                   (rule 29)
 	Stmt -> 'if' '(' . Expr ')' Block 'else' Block      (rule 30)
@@ -2581,24 +2592,24 @@ State 140
 	Expr3          goto state 48
 	Expr2          goto state 49
 	Expr1          goto state 50
-	Expr           goto state 166
+	Expr           goto state 167
 
-State 141
+State 142
 
 	Stmt -> 'gen' Ident . '=' Ident '(' ListFunArg ')' ';'    (rule 34)
 
-	'='            shift, and enter state 165
+	'='            shift, and enter state 166
 
 
-State 142
+State 143
 
 	Stmt -> 'for' '(' . Ident 'in' Ident '(' ListFunArg ')' ')' Block    (rule 35)
 
 	L_Ident        shift, and enter state 2
 
-	Ident          goto state 164
+	Ident          goto state 165
 
-State 143
+State 144
 
 	Stmt -> 'continue' ';' .                            (rule 28)
 
@@ -2630,7 +2641,7 @@ State 143
 	L_quoted       reduce using rule 28
 
 
-State 144
+State 145
 
 	Stmt -> 'break' ';' .                               (rule 27)
 
@@ -2662,7 +2673,7 @@ State 144
 	L_quoted       reduce using rule 27
 
 
-State 145
+State 146
 
 	Stmt -> Expr ';' .                                  (rule 41)
 
@@ -2694,21 +2705,21 @@ State 145
 	L_quoted       reduce using rule 41
 
 
-State 146
+State 147
 
 	Stmt -> Type Ident . '=' Expr ';'                   (rule 23)
 
-	'='            shift, and enter state 163
+	'='            shift, and enter state 164
 
 
-State 147
+State 148
 
 	ListStmt -> Stmt ListStmt .                         (rule 20)
 
 	'}'            reduce using rule 20
 
 
-State 148
+State 149
 
 	Block -> '{' ListStmt '}' .                         (rule 18)
 
@@ -2745,49 +2756,49 @@ State 148
 	%eof           reduce using rule 18
 
 
-State 149
+State 150
 
 	Stmt -> Ident '++' . ';'                            (rule 25)
 
-	';'            shift, and enter state 162
-
-
-State 150
-
-	Stmt -> Ident '--' . ';'                            (rule 26)
-
-	';'            shift, and enter state 161
+	';'            shift, and enter state 163
 
 
 State 151
 
-	Stmt -> Ident '.add' . '(' Expr ').(' Expr ')' ';'    (rule 39)
+	Stmt -> Ident '--' . ';'                            (rule 26)
 
-	'('            shift, and enter state 160
+	';'            shift, and enter state 162
 
 
 State 152
 
-	Stmt -> Ident '.pop' . ';'                          (rule 38)
+	Stmt -> Ident '.add' . '(' Expr ').(' Expr ')' ';'    (rule 39)
 
-	';'            shift, and enter state 159
+	'('            shift, and enter state 161
 
 
 State 153
 
-	Stmt -> Ident '.push' . '(' Expr ')' ';'            (rule 37)
+	Stmt -> Ident '.pop' . ';'                          (rule 38)
 
-	'('            shift, and enter state 158
+	';'            shift, and enter state 160
 
 
 State 154
 
-	Stmt -> Ident '.remove' . '(' Expr ')' ';'          (rule 40)
+	Stmt -> Ident '.push' . '(' Expr ')' ';'            (rule 37)
 
-	'('            shift, and enter state 157
+	'('            shift, and enter state 159
 
 
 State 155
+
+	Stmt -> Ident '.remove' . '(' Expr ')' ';'          (rule 40)
+
+	'('            shift, and enter state 158
+
+
+State 156
 
 	Stmt -> Ident '=' . Expr ';'                        (rule 24)
 
@@ -2816,16 +2827,16 @@ State 155
 	Expr3          goto state 48
 	Expr2          goto state 49
 	Expr1          goto state 50
-	Expr           goto state 156
+	Expr           goto state 157
 
-State 156
+State 157
 
 	Stmt -> Ident '=' Expr . ';'                        (rule 24)
 
-	';'            shift, and enter state 183
+	';'            shift, and enter state 184
 
 
-State 157
+State 158
 
 	Stmt -> Ident '.remove' '(' . Expr ')' ';'          (rule 40)
 
@@ -2854,9 +2865,9 @@ State 157
 	Expr3          goto state 48
 	Expr2          goto state 49
 	Expr1          goto state 50
-	Expr           goto state 182
+	Expr           goto state 183
 
-State 158
+State 159
 
 	Stmt -> Ident '.push' '(' . Expr ')' ';'            (rule 37)
 
@@ -2885,9 +2896,9 @@ State 158
 	Expr3          goto state 48
 	Expr2          goto state 49
 	Expr1          goto state 50
-	Expr           goto state 181
+	Expr           goto state 182
 
-State 159
+State 160
 
 	Stmt -> Ident '.pop' ';' .                          (rule 38)
 
@@ -2919,7 +2930,7 @@ State 159
 	L_quoted       reduce using rule 38
 
 
-State 160
+State 161
 
 	Stmt -> Ident '.add' '(' . Expr ').(' Expr ')' ';'    (rule 39)
 
@@ -2948,9 +2959,9 @@ State 160
 	Expr3          goto state 48
 	Expr2          goto state 49
 	Expr1          goto state 50
-	Expr           goto state 180
+	Expr           goto state 181
 
-State 161
+State 162
 
 	Stmt -> Ident '--' ';' .                            (rule 26)
 
@@ -2982,7 +2993,7 @@ State 161
 	L_quoted       reduce using rule 26
 
 
-State 162
+State 163
 
 	Stmt -> Ident '++' ';' .                            (rule 25)
 
@@ -3014,7 +3025,7 @@ State 162
 	L_quoted       reduce using rule 25
 
 
-State 163
+State 164
 
 	Stmt -> Type Ident '=' . Expr ';'                   (rule 23)
 
@@ -3043,67 +3054,67 @@ State 163
 	Expr3          goto state 48
 	Expr2          goto state 49
 	Expr1          goto state 50
-	Expr           goto state 179
+	Expr           goto state 180
 
-State 164
+State 165
 
 	Stmt -> 'for' '(' Ident . 'in' Ident '(' ListFunArg ')' ')' Block    (rule 35)
 
-	'in'           shift, and enter state 178
+	'in'           shift, and enter state 179
 
 
-State 165
+State 166
 
 	Stmt -> 'gen' Ident '=' . Ident '(' ListFunArg ')' ';'    (rule 34)
 
 	L_Ident        shift, and enter state 2
 
-	Ident          goto state 177
+	Ident          goto state 178
 
-State 166
+State 167
 
 	Stmt -> 'if' '(' Expr . ')' Block                   (rule 29)
 	Stmt -> 'if' '(' Expr . ')' Block 'else' Block      (rule 30)
 
-	')'            shift, and enter state 176
-
-
-State 167
-
-	Stmt -> 'list' Type Ident . '=' '[' ListExpr ']' ';'    (rule 36)
-
-	'='            shift, and enter state 175
+	')'            shift, and enter state 177
 
 
 State 168
 
-	Stmt -> 'return' '(' Expr . ')'                     (rule 32)
+	Stmt -> 'list' Type Ident . '=' '[' ListExpr ']' ';'    (rule 36)
 
-	')'            shift, and enter state 174
+	'='            shift, and enter state 176
 
 
 State 169
 
-	Stmt -> 'while' '(' Expr . ')' Block                (rule 31)
+	Stmt -> 'return' '(' Expr . ')'                     (rule 32)
 
-	')'            shift, and enter state 173
+	')'            shift, and enter state 175
 
 
 State 170
 
-	Stmt -> 'yield' '(' Expr . ')'                      (rule 33)
+	Stmt -> 'while' '(' Expr . ')' Block                (rule 31)
 
-	')'            shift, and enter state 172
+	')'            shift, and enter state 174
 
 
 State 171
+
+	Stmt -> 'yield' '(' Expr . ')'                      (rule 33)
+
+	')'            shift, and enter state 173
+
+
+State 172
 
 	ListFunArg -> FunArg ',' ListFunArg .               (rule 65)
 
 	')'            reduce using rule 65
 
 
-State 172
+State 173
 
 	Stmt -> 'yield' '(' Expr ')' .                      (rule 33)
 
@@ -3135,15 +3146,15 @@ State 172
 	L_quoted       reduce using rule 33
 
 
-State 173
+State 174
 
 	Stmt -> 'while' '(' Expr ')' . Block                (rule 31)
 
 	'{'            shift, and enter state 94
 
-	Block          goto state 192
+	Block          goto state 193
 
-State 174
+State 175
 
 	Stmt -> 'return' '(' Expr ')' .                     (rule 32)
 
@@ -3175,66 +3186,66 @@ State 174
 	L_quoted       reduce using rule 32
 
 
-State 175
+State 176
 
 	Stmt -> 'list' Type Ident '=' . '[' ListExpr ']' ';'    (rule 36)
 
-	'['            shift, and enter state 191
+	'['            shift, and enter state 192
 
 
-State 176
+State 177
 
 	Stmt -> 'if' '(' Expr ')' . Block                   (rule 29)
 	Stmt -> 'if' '(' Expr ')' . Block 'else' Block      (rule 30)
 
 	'{'            shift, and enter state 94
 
-	Block          goto state 190
+	Block          goto state 191
 
-State 177
+State 178
 
 	Stmt -> 'gen' Ident '=' Ident . '(' ListFunArg ')' ';'    (rule 34)
 
-	'('            shift, and enter state 189
+	'('            shift, and enter state 190
 
 
-State 178
+State 179
 
 	Stmt -> 'for' '(' Ident 'in' . Ident '(' ListFunArg ')' ')' Block    (rule 35)
 
 	L_Ident        shift, and enter state 2
 
-	Ident          goto state 188
-
-State 179
-
-	Stmt -> Type Ident '=' Expr . ';'                   (rule 23)
-
-	';'            shift, and enter state 187
-
+	Ident          goto state 189
 
 State 180
 
-	Stmt -> Ident '.add' '(' Expr . ').(' Expr ')' ';'    (rule 39)
+	Stmt -> Type Ident '=' Expr . ';'                   (rule 23)
 
-	').('          shift, and enter state 186
+	';'            shift, and enter state 188
 
 
 State 181
 
-	Stmt -> Ident '.push' '(' Expr . ')' ';'            (rule 37)
+	Stmt -> Ident '.add' '(' Expr . ').(' Expr ')' ';'    (rule 39)
 
-	')'            shift, and enter state 185
+	').('          shift, and enter state 187
 
 
 State 182
 
-	Stmt -> Ident '.remove' '(' Expr . ')' ';'          (rule 40)
+	Stmt -> Ident '.push' '(' Expr . ')' ';'            (rule 37)
 
-	')'            shift, and enter state 184
+	')'            shift, and enter state 186
 
 
 State 183
+
+	Stmt -> Ident '.remove' '(' Expr . ')' ';'          (rule 40)
+
+	')'            shift, and enter state 185
+
+
+State 184
 
 	Stmt -> Ident '=' Expr ';' .                        (rule 24)
 
@@ -3266,21 +3277,21 @@ State 183
 	L_quoted       reduce using rule 24
 
 
-State 184
+State 185
 
 	Stmt -> Ident '.remove' '(' Expr ')' . ';'          (rule 40)
+
+	';'            shift, and enter state 200
+
+
+State 186
+
+	Stmt -> Ident '.push' '(' Expr ')' . ';'            (rule 37)
 
 	';'            shift, and enter state 199
 
 
-State 185
-
-	Stmt -> Ident '.push' '(' Expr ')' . ';'            (rule 37)
-
-	';'            shift, and enter state 198
-
-
-State 186
+State 187
 
 	Stmt -> Ident '.add' '(' Expr ').(' . Expr ')' ';'    (rule 39)
 
@@ -3309,9 +3320,9 @@ State 186
 	Expr3          goto state 48
 	Expr2          goto state 49
 	Expr1          goto state 50
-	Expr           goto state 197
+	Expr           goto state 198
 
-State 187
+State 188
 
 	Stmt -> Type Ident '=' Expr ';' .                   (rule 23)
 
@@ -3343,19 +3354,19 @@ State 187
 	L_quoted       reduce using rule 23
 
 
-State 188
+State 189
 
 	Stmt -> 'for' '(' Ident 'in' Ident . '(' ListFunArg ')' ')' Block    (rule 35)
 
-	'('            shift, and enter state 196
+	'('            shift, and enter state 197
 
 
-State 189
+State 190
 
 	Stmt -> 'gen' Ident '=' Ident '(' . ListFunArg ')' ';'    (rule 34)
 
 	'!'            shift, and enter state 52
-	'&'            shift, and enter state 116
+	'&'            shift, and enter state 117
 	'('            shift, and enter state 53
 	')'            reduce using rule 63
 	'-'            shift, and enter state 54
@@ -3375,17 +3386,17 @@ State 189
 	Expr7          goto state 42
 	ELit           goto state 43
 	EBool          goto state 44
-	FunArg         goto state 113
-	ListFunArg     goto state 195
+	FunArg         goto state 114
+	ListFunArg     goto state 196
 	Expr6          goto state 45
 	Expr5          goto state 46
 	Expr4          goto state 47
 	Expr3          goto state 48
 	Expr2          goto state 49
 	Expr1          goto state 50
-	Expr           goto state 115
+	Expr           goto state 116
 
-State 190
+State 191
 
 	Stmt -> 'if' '(' Expr ')' Block .                   (rule 29)
 	Stmt -> 'if' '(' Expr ')' Block . 'else' Block      (rule 30)
@@ -3398,7 +3409,7 @@ State 190
 	'break'        reduce using rule 29
 	'char'         reduce using rule 29
 	'continue'     reduce using rule 29
-	'else'         shift, and enter state 194
+	'else'         shift, and enter state 195
 	'false'        reduce using rule 29
 	'for'          reduce using rule 29
 	'gen'          reduce using rule 29
@@ -3419,7 +3430,7 @@ State 190
 	L_quoted       reduce using rule 29
 
 
-State 191
+State 192
 
 	Stmt -> 'list' Type Ident '=' '[' . ListExpr ']' ';'    (rule 36)
 
@@ -3450,9 +3461,9 @@ State 191
 	Expr2          goto state 49
 	Expr1          goto state 50
 	Expr           goto state 62
-	ListExpr       goto state 193
+	ListExpr       goto state 194
 
-State 192
+State 193
 
 	Stmt -> 'while' '(' Expr ')' Block .                (rule 31)
 
@@ -3484,34 +3495,34 @@ State 192
 	L_quoted       reduce using rule 31
 
 
-State 193
+State 194
 
 	Stmt -> 'list' Type Ident '=' '[' ListExpr . ']' ';'    (rule 36)
 
-	']'            shift, and enter state 204
+	']'            shift, and enter state 205
 
 
-State 194
+State 195
 
 	Stmt -> 'if' '(' Expr ')' Block 'else' . Block      (rule 30)
 
 	'{'            shift, and enter state 94
 
-	Block          goto state 203
+	Block          goto state 204
 
-State 195
+State 196
 
 	Stmt -> 'gen' Ident '=' Ident '(' ListFunArg . ')' ';'    (rule 34)
 
-	')'            shift, and enter state 202
+	')'            shift, and enter state 203
 
 
-State 196
+State 197
 
 	Stmt -> 'for' '(' Ident 'in' Ident '(' . ListFunArg ')' ')' Block    (rule 35)
 
 	'!'            shift, and enter state 52
-	'&'            shift, and enter state 116
+	'&'            shift, and enter state 117
 	'('            shift, and enter state 53
 	')'            reduce using rule 63
 	'-'            shift, and enter state 54
@@ -3531,24 +3542,24 @@ State 196
 	Expr7          goto state 42
 	ELit           goto state 43
 	EBool          goto state 44
-	FunArg         goto state 113
-	ListFunArg     goto state 201
+	FunArg         goto state 114
+	ListFunArg     goto state 202
 	Expr6          goto state 45
 	Expr5          goto state 46
 	Expr4          goto state 47
 	Expr3          goto state 48
 	Expr2          goto state 49
 	Expr1          goto state 50
-	Expr           goto state 115
+	Expr           goto state 116
 
-State 197
+State 198
 
 	Stmt -> Ident '.add' '(' Expr ').(' Expr . ')' ';'    (rule 39)
 
-	')'            shift, and enter state 200
+	')'            shift, and enter state 201
 
 
-State 198
+State 199
 
 	Stmt -> Ident '.push' '(' Expr ')' ';' .            (rule 37)
 
@@ -3580,7 +3591,7 @@ State 198
 	L_quoted       reduce using rule 37
 
 
-State 199
+State 200
 
 	Stmt -> Ident '.remove' '(' Expr ')' ';' .          (rule 40)
 
@@ -3612,28 +3623,28 @@ State 199
 	L_quoted       reduce using rule 40
 
 
-State 200
+State 201
 
 	Stmt -> Ident '.add' '(' Expr ').(' Expr ')' . ';'    (rule 39)
 
-	';'            shift, and enter state 208
-
-
-State 201
-
-	Stmt -> 'for' '(' Ident 'in' Ident '(' ListFunArg . ')' ')' Block    (rule 35)
-
-	')'            shift, and enter state 207
+	';'            shift, and enter state 209
 
 
 State 202
 
-	Stmt -> 'gen' Ident '=' Ident '(' ListFunArg ')' . ';'    (rule 34)
+	Stmt -> 'for' '(' Ident 'in' Ident '(' ListFunArg . ')' ')' Block    (rule 35)
 
-	';'            shift, and enter state 206
+	')'            shift, and enter state 208
 
 
 State 203
+
+	Stmt -> 'gen' Ident '=' Ident '(' ListFunArg ')' . ';'    (rule 34)
+
+	';'            shift, and enter state 207
+
+
+State 204
 
 	Stmt -> 'if' '(' Expr ')' Block 'else' Block .      (rule 30)
 
@@ -3665,14 +3676,14 @@ State 203
 	L_quoted       reduce using rule 30
 
 
-State 204
+State 205
 
 	Stmt -> 'list' Type Ident '=' '[' ListExpr ']' . ';'    (rule 36)
 
-	';'            shift, and enter state 205
+	';'            shift, and enter state 206
 
 
-State 205
+State 206
 
 	Stmt -> 'list' Type Ident '=' '[' ListExpr ']' ';' .    (rule 36)
 
@@ -3704,7 +3715,7 @@ State 205
 	L_quoted       reduce using rule 36
 
 
-State 206
+State 207
 
 	Stmt -> 'gen' Ident '=' Ident '(' ListFunArg ')' ';' .    (rule 34)
 
@@ -3736,14 +3747,14 @@ State 206
 	L_quoted       reduce using rule 34
 
 
-State 207
+State 208
 
 	Stmt -> 'for' '(' Ident 'in' Ident '(' ListFunArg ')' . ')' Block    (rule 35)
 
-	')'            shift, and enter state 209
+	')'            shift, and enter state 210
 
 
-State 208
+State 209
 
 	Stmt -> Ident '.add' '(' Expr ').(' Expr ')' ';' .    (rule 39)
 
@@ -3775,15 +3786,15 @@ State 208
 	L_quoted       reduce using rule 39
 
 
-State 209
+State 210
 
 	Stmt -> 'for' '(' Ident 'in' Ident '(' ListFunArg ')' ')' . Block    (rule 35)
 
 	'{'            shift, and enter state 94
 
-	Block          goto state 210
+	Block          goto state 211
 
-State 210
+State 211
 
 	Stmt -> 'for' '(' Ident 'in' Ident '(' ListFunArg ')' ')' Block .    (rule 35)
 
@@ -3821,4 +3832,4 @@ Grammar Totals
 Number of rules: 96
 Number of terminals: 57
 Number of non-terminals: 32
-Number of states: 211
+Number of states: 212

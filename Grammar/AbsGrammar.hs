@@ -32,7 +32,7 @@ data TopDef' a
   deriving (C.Eq, C.Ord, C.Show, C.Read, C.Functor, C.Foldable, C.Traversable)
 
 type Arg = Arg' BNFC'Position
-data Arg' a = Arg_T a (Type' a) Ident | ArgList_T a Ident
+data Arg' a = Arg_T a (Type' a) Ident | ArgList_T a (Type' a) Ident
   deriving (C.Eq, C.Ord, C.Show, C.Read, C.Functor, C.Foldable, C.Traversable)
 
 type Block = Block' BNFC'Position
@@ -156,7 +156,7 @@ instance HasPosition TopDef where
 instance HasPosition Arg where
   hasPosition = \case
     Arg_T p _ _ -> p
-    ArgList_T p _ -> p
+    ArgList_T p _ _ -> p
 
 instance HasPosition Block where
   hasPosition = \case

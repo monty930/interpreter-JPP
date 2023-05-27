@@ -10,12 +10,13 @@ każdy typ (rzutować można typy dla których to ma sens, np char na int,
 int na bool, wszystkie typy na string; np rzutowanie string na int nie ma sensu).
 Procedury przyjmują argumenty ale nie zwracają wartości.
 Funkcje zwracają wartość.
-Język jest dynamicznie typowany. Ma statyczne wiązanie identyfikatorów.
+Język jest statycznie typowany. Ma statyczne wiązanie identyfikatorów.
 Język zezwala na redeklarację zmiennych.
 Zaimplementowana jest obsługa błędów wykonania. Komunikaty o błędach
 wypisywane są na standardowe wyjście błędów.
-
-TODO: 12, 18
+Dostępne są listy z: pop, push, remove, add.
+Język oferuje generatory (takie jak w języku python).
+Z pętli while można wyjść przez break/continue.
 
   Na 15 punktów
 jest  01 (trzy typy)
@@ -31,14 +32,14 @@ jest  09 (przesłanianie i statyczne wiązanie)
 jest  10 (obsługa błędów wykonania)
 jest  11 (funkcje zwracające wartość)
       Na 30 punktów
-      12 (4) (statyczne typowanie)
+jest  12 (4) (statyczne typowanie)
       13 (2) (funkcje zagnieżdżone ze statycznym wiązaniem)
-      14 (1/2) (rekordy/listy/tablice/tablice wielowymiarowe)
+jest(1)  14 (1/2) (rekordy/listy/tablice/tablice wielowymiarowe)
       15 (2) (krotki z przypisaniem)
-      16 (1) (break, continue)
+jest  16 (1) (break, continue)
       17 (4) (funkcje wyższego rzędu, anonimowe, domknięcia)
-      18 (3) (generatory)
+jest  18 (3) (generatory)
 
 Dodatkowo: jawne rzutowanie
 
-Razem: 21
+Razem: 30
