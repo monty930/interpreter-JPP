@@ -46,6 +46,8 @@ transStmt x = case x of
   AbsGrammar.Ass_T _ ident expr -> failure x
   AbsGrammar.Incr_T _ ident -> failure x
   AbsGrammar.Decr_T _ ident -> failure x
+  AbsGrammar.Break_T _ -> failure x
+  AbsGrammar.Continue_T _ -> failure x
   AbsGrammar.Cond_T _ expr block -> failure x
   AbsGrammar.CondElse_T _ expr block1 block2 -> failure x
   AbsGrammar.While_T _ expr block -> failure x
