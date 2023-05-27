@@ -243,14 +243,25 @@ evalTopDefs :: [TopDef] -> RSE Env
 evalTopDefs [] = ask
 evalTopDefs (topdef : topdefs) = do
   case topdef of
-    ProcDef_T pos ret ident args block -> do
+    ProcDecl_T pos ret ident args -> do
       (envVarIter, envProc, envGen) <- ask
       -- check if procedure is already defined
       case M.lookup ident envProc of
         Just _ -> makeError ("Procedure " ++ getIdentString ident ++ " already defined") pos
         Nothing -> do
           -- add procedure to environment
-          let envProc' = M.insert ident (ret, args, block, envVarIter) envProc
+          let emptyBlock = Block_T BNFC'NoPosition []
+          let envProc' = M.insert ident (ret, args, emptyBlock, envVarIter, False) envProc
+          let newEnv = (envVarIter, envProc', envGen)
+          local (const newEnv) (evalTopDefs topdefs)
+    ProcDef_T pos ret ident args block -> do
+      (envVarIter, envProc, envGen) <- ask
+      -- check if procedure is already defined
+      case M.lookup ident envProc of
+        Just (_, _, _, _, True) -> makeError ("Procedure " ++ getIdentString ident ++ " already defined") pos
+        _ -> do
+          -- add procedure to environment
+          let envProc' = M.insert ident (ret, args, block, envVarIter, True) envProc
           let newEnv = (envVarIter, envProc', envGen)
           local (const newEnv) (evalTopDefs topdefs)
     GlobVar_T pos type_ ident expr -> do
@@ -324,8 +335,9 @@ evalApp pos ident args = do
         then printLnImpl pos args
         else do
           ((envVar, envIter), envProc, envGen) <- ask
-          (ret, args', block, (envVar', envIter')) <- case M.lookup ident envProc of
-            Just (ret, args', block, (envVar', envIter')) -> return (ret, args', block, (envVar', envIter'))
+          (ret, args', block, (envVar', envIter'), _defined) <- case M.lookup ident envProc of
+            Just (ret, args', block, (envVar', envIter'), True) -> return (ret, args', block, (envVar', envIter'), True)
+            Just (_, _, _, _, False) -> makeError ("Procedure " ++ getIdentString ident ++ " not defined") pos
             Nothing ->
               case pos of
                 BNFC'NoPosition -> makeError "There is no 'main' procedure!" pos
@@ -815,10 +827,10 @@ initialEnvProc :: EnvProc
 initialEnvProc =
   M.insert
     (Ident "print")
-    (FunRetVoid_T BNFC'NoPosition, printProcArg, printBlock, initialEnvVarIter)
+    (FunRetVoid_T BNFC'NoPosition, printProcArg, printBlock, initialEnvVarIter, True)
     ( M.insert
         (Ident "print_line")
-        (FunRetVoid_T BNFC'NoPosition, printProcArg, printBlock, initialEnvVarIter)
+        (FunRetVoid_T BNFC'NoPosition, printProcArg, printBlock, initialEnvVarIter, True)
         M.empty
     )
 

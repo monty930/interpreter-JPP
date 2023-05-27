@@ -1,1 +1,1 @@
-interpreter: [type checker] line 2, column 5 Variable Ident "x" undefined
+interpreter: [type checker] line 2, column 5 Variable x undefined

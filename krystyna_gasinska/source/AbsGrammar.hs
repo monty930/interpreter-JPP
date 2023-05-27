@@ -5,8 +5,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-{-# HLINT ignore "Use camelCase" #-}
 
 -- | The abstract syntax of language grammar.
 
@@ -26,7 +24,8 @@ data Program' a = Program_T a [TopDef' a]
 
 type TopDef = TopDef' BNFC'Position
 data TopDef' a
-    = ProcDef_T a (RetVal' a) Ident [Arg' a] (Block' a)
+    = ProcDecl_T a (RetVal' a) Ident [Arg' a]
+    | ProcDef_T a (RetVal' a) Ident [Arg' a] (Block' a)
     | GlobVar_T a (Type' a) Ident (Expr' a)
     | Gener_T a (Type' a) Ident [Arg' a] (Block' a)
   deriving (C.Eq, C.Ord, C.Show, C.Read, C.Functor, C.Foldable, C.Traversable)
@@ -138,6 +137,7 @@ instance HasPosition Program where
 
 instance HasPosition TopDef where
   hasPosition = \case
+    ProcDecl_T p _ _ _ -> p
     ProcDef_T p _ _ _ _ -> p
     GlobVar_T p _ _ _ -> p
     Gener_T p _ _ _ _ -> p

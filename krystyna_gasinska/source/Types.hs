@@ -21,7 +21,7 @@ type EnvIter = M.Map Ident Loc
 
 type StoreIter = M.Map Loc (Type, GenState, EnvVarIter)
 
-type EnvProc = M.Map Ident (RetVal, [Arg], Block, EnvVarIter)
+type EnvProc = M.Map Ident (RetVal, [Arg], Block, EnvVarIter, Bool)
 
 type EnvGen = M.Map Ident (Type, [Arg], Block, EnvVarIter)
 

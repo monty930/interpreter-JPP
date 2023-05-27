@@ -1,6 +1,7 @@
 -- programs ------------------------------------------------
 entrypoints Program ;
 Program_T. Program ::= [TopDef] ;
+ProcDecl_T. TopDef ::= RetVal Ident "(" [Arg] ")" ";" ;
 ProcDef_T. TopDef ::= RetVal Ident "(" [Arg] ")" Block ;
 GlobVar_T. TopDef ::= "Glob" Type Ident "=" Expr ";" ;
 Gener_T.   TopDef ::= "Gen" Type Ident "(" [Arg] ")" Block ;

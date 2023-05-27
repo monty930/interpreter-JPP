@@ -41,7 +41,7 @@ The reserved words used in grammar are the following:
   | ``while`` | ``yield`` |  |
 
 The symbols used in grammar are the following:
-  | ( | ) | = | ;
+  | ( | ) | ; | =
   | , | { | } | ++
   | -- | & | - | !
   | && | || | + | *
@@ -58,7 +58,8 @@ and **eps** (empty rule) belong to the BNF notation.
 All other symbols are terminals.
 
   | //Program// | -> | //[TopDef]//
-  | //TopDef// | -> | //RetVal// //Ident// ``(`` //[Arg]// ``)`` //Block//
+  | //TopDef// | -> | //RetVal// //Ident// ``(`` //[Arg]// ``)`` ``;``
+  |  |  **|**  | //RetVal// //Ident// ``(`` //[Arg]// ``)`` //Block//
   |  |  **|**  | ``Glob`` //Type// //Ident// ``=`` //Expr// ``;``
   |  |  **|**  | ``Gen`` //Type// //Ident// ``(`` //[Arg]// ``)`` //Block//
   | //[TopDef]// | -> | **eps**

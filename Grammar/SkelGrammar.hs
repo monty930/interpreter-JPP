@@ -25,6 +25,7 @@ transProgram x = case x of
 
 transTopDef :: Show a => AbsGrammar.TopDef' a -> Result
 transTopDef x = case x of
+  AbsGrammar.ProcDecl_T _ retval ident args -> failure x
   AbsGrammar.ProcDef_T _ retval ident args block -> failure x
   AbsGrammar.GlobVar_T _ type_ ident expr -> failure x
   AbsGrammar.Gener_T _ type_ ident args block -> failure x

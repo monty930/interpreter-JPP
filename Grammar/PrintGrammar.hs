@@ -146,6 +146,7 @@ instance Print (AbsGrammar.Program' a) where
 
 instance Print (AbsGrammar.TopDef' a) where
   prt i = \case
+    AbsGrammar.ProcDecl_T _ retval id_ args -> prPrec i 0 (concatD [prt 0 retval, prt 0 id_, doc (showString "("), prt 0 args, doc (showString ")"), doc (showString ";")])
     AbsGrammar.ProcDef_T _ retval id_ args block -> prPrec i 0 (concatD [prt 0 retval, prt 0 id_, doc (showString "("), prt 0 args, doc (showString ")"), prt 0 block])
     AbsGrammar.GlobVar_T _ type_ id_ expr -> prPrec i 0 (concatD [doc (showString "Glob"), prt 0 type_, prt 0 id_, doc (showString "="), prt 0 expr, doc (showString ";")])
     AbsGrammar.Gener_T _ type_ id_ args block -> prPrec i 0 (concatD [doc (showString "Gen"), prt 0 type_, prt 0 id_, doc (showString "("), prt 0 args, doc (showString ")"), prt 0 block])

@@ -15,6 +15,7 @@ import Control.Monad.State
 import Control.Monad.Except
 
 data TypeT = IntT | CharT | StrT | BoolT | VoidT
+    deriving (Show, Eq)
 
 type EnvVarT = M.Map Ident Loc
 
@@ -24,7 +25,7 @@ type StoreIterT = M.Map Loc TypeT
 
 type EnvIterT = M.Map Ident Loc
 
-type EnvProcT = M.Map Ident (TypeT, [TypeT])
+type EnvProcT = M.Map Ident (TypeT, [TypeT], Bool)
 
 type EnvGenT = M.Map Ident (TypeT, [TypeT])
 
@@ -56,6 +57,11 @@ checkTopDefs [] = return ()
 
 checkTopDefs (topdef : topdefs) = do
     case topdef of
+        ProcDecl_T pos retval ident args -> do
+            ((envVar, envIter), envProc, envGen) <- ask
+            envP <- checkProcDecl pos retval ident args
+            local (const ((envVar, envIter), envP, envGen)) (checkTopDefs topdefs)
+
         ProcDef_T pos retval ident args block -> do
             ((envVar, envIter), envProc, envGen) <- ask
             envP <- checkProcDef pos retval ident args block
@@ -96,10 +102,42 @@ checkProcDef pos retval ident args block = do
     ((envVar, envIter), envProc, envGen) <- ask
     (envVar', argTypes) <- insertArgsToEnvProc pos (envVar, []) args
     let type_ = retValToTypeT retval
-    let envProc' = M.insert ident (type_, argTypes) envProc
-    let ret_type = typeTToBlockRetType type_
-    local (const ((envVar', envIter), envProc', envGen)) (checkBlock ret_type block)
-    return envProc'
+    case M.lookup ident envProc of
+        Just (type_', argTypes', False) -> do 
+            if type_' == type_ && argTypes' == argTypes
+                then do
+                    let envProc' = M.insert ident (type_', argTypes', True) envProc
+                    let ret_type = typeTToBlockRetType type_'
+                    local (const ((envVar', envIter), envProc', envGen)) (checkBlock ret_type block)
+                    return envProc'
+                else do
+                    makeTypeError ("Procedure " ++ getIdentString ident ++ " is already defined with different type or arguments.") pos
+        Just (type_', argTypes', True) -> do
+            makeTypeError ("Procedure " ++ getIdentString ident ++ " is already defined.") pos
+        _ -> do 
+            let envProc' = M.insert ident (type_, argTypes, True) envProc
+            let ret_type = typeTToBlockRetType type_
+            local (const ((envVar', envIter), envProc', envGen)) (checkBlock ret_type block)
+            return envProc'
+
+checkProcDecl :: BNFC'Position -> RetVal -> Ident -> [Arg] -> RSET EnvProcT
+checkProcDecl pos retval ident args = do
+    ((envVar, envIter), envProc, envGen) <- ask
+    (envVar', argTypes) <- insertArgsToEnvProc pos (envVar, []) args
+    let type_ = retValToTypeT retval
+    case M.lookup ident envProc of
+        Just (type_', argTypes', False) -> do 
+            if type_' == type_ && argTypes' == argTypes
+                then do
+                    let envProc' = M.insert ident (type_', argTypes', False) envProc
+                    return envProc'
+                else do
+                    makeTypeError ("Procedure " ++ getIdentString ident ++ " is already defined with different type or arguments.") pos
+        Just (type_', argTypes', True) -> do
+            makeTypeError ("Procedure " ++ getIdentString ident ++ " is already defined.") pos
+        _ -> do 
+            let envProc' = M.insert ident (type_, argTypes, False) envProc
+            return envProc'
 
 typeTToBlockRetType :: TypeT -> BlockRetType
 typeTToBlockRetType type_ = 
@@ -145,7 +183,7 @@ checkDeclIter pos ident1 ident2 args = do
     let loc = getNewLocIterT stIter
     let envIter' = M.insert ident1 loc envIter
     case M.lookup ident2 envGen of
-        Nothing -> throwError ("Generator " ++ show ident2 ++ " not found")
+        Nothing -> makeTypeError ("Generator " ++ getIdentString ident2 ++ " not found") pos
         Just (type_, argTypes) -> do
             checkArgs pos args argTypes
             put (srVar, M.insert loc type_ stIter)
@@ -199,10 +237,10 @@ checkStmt ret_type (Ass_T pos ident expr) = do
     let typeExpr' = getValType typeExpr
     case M.lookup ident envVar of 
         Nothing -> do 
-            makeTypeError ("Variable " ++ show ident ++ " undefined") pos
+            makeTypeError ("Variable " ++ getIdentString ident ++ " undefined") pos
         Just loc -> case M.lookup loc storeVar of 
             Nothing -> do 
-                makeTypeError ("Variable " ++ show ident ++ " undefined") pos
+                makeTypeError ("Variable " ++ getIdentString ident ++ " undefined") pos
             Just type_ -> do
                 let type_' = getValType type_
                 if stringTypeOfType type_' == stringTypeOfType typeExpr'
@@ -315,10 +353,10 @@ checkIncrDecr pos ident = do
     (storeVar, _storeIter) <- get
     case M.lookup ident envVar of 
         Nothing -> do 
-            makeTypeError ("Variable " ++ show ident ++ " undefined") pos
+            makeTypeError ("Variable " ++ getIdentString ident ++ " undefined") pos
         Just loc -> case M.lookup loc storeVar of 
             Nothing -> do 
-                makeTypeError ("Variable " ++ show ident ++ " undefined") pos
+                makeTypeError ("Variable " ++ getIdentString ident ++ " undefined") pos
             Just type_ -> do
                 let type_' = getValType type_
                 if stringTypeOfType type_' == "int"
@@ -519,7 +557,7 @@ checkExpr (App_T pos ident funargs) = do
                         ("Function " ++
                         getIdentString ident ++
                         " not declared") pos
-        Just (type_, argsTypes) -> do
+        Just (type_, argsTypes, _) -> do
             checkArgs pos funargs argsTypes
             return type_
 
