@@ -175,9 +175,45 @@ checkStmts ret_type can_break (stmt : stmts) = do
         DeclGen_T pos ident1 ident2 args -> do
             env <- checkDeclIter pos ident1 ident2 args
             local (const env) (checkStmts ret_type can_break stmts)
+        DeclList_T pos type_ ident1 exprs -> do
+            env <- checkDeclList pos type_ ident1 exprs
+            local (const env) (checkStmts ret_type can_break stmts)
         _no_decl -> do
             checkStmt ret_type can_break stmt
             checkStmts ret_type can_break stmts
+
+checkDeclList :: BNFC'Position -> Type -> Ident -> [Expr] -> RSET EnvT
+checkDeclList pos type_ ident exprs = do
+    ((envVar, envIter), envProc, envGen) <- ask
+    (storeVar, storeIter) <- get
+    let type_' = toTypeT type_
+    let loc = getNewLocT storeVar
+    let envVar' = M.insert ident loc envVar
+    let t = typeToTab type_
+    put (M.insert loc t storeVar, storeIter)
+    local (const ((envVar', envIter), envProc, envGen)) (checkExprs pos exprs type_)
+    return ((envVar', envIter), envProc, envGen)
+
+typeToTab :: Type -> TypeT
+typeToTab type_ = case type_ of
+    Int_T _ -> TabT IntPlainT
+    CharT_T _ -> TabT CharPlainT
+    Str_T _ -> TabT StrPlainT
+    Bool_T _ -> TabT BoolPlainT
+
+checkExprs :: BNFC'Position -> [Expr] -> Type -> RSET ()
+checkExprs pos [] _type_ = return ()
+checkExprs pos (ex : exs) type_ = do
+    t <- checkExpr ex
+    let t' = getValType t
+    if stringTypeOfType t' == stringTypeOfType type_
+        then checkExprs pos exs type_
+        else makeTypeError
+            ("Expression has type " ++
+            stringTypeOfType t' ++
+            " but should have type " ++
+            stringTypeOfType type_)
+            pos
 
 checkDeclIter :: BNFC'Position -> Ident -> Ident -> [FunArg] -> RSET EnvT
 checkDeclIter pos ident1 ident2 args = do

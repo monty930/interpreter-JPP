@@ -1,0 +1,8 @@
+
+
+Proc main() {
+    int i = 0;
+    list char l = ['c'];
+    l.push('d');
+    print_line((string) l[0]);
+}

@@ -618,6 +618,15 @@ evalStmts ret_type pos (stmt : stmts) = do
           local (const newEnv) (evalStmts ret_type pos stmts)
         else do
           makeError "Type mismatch" pos_decl
+    DeclList_T pos_decl type_ ident exprs -> do
+      ((envVar, envIter, envList), envProc, envGen) <- ask
+      (stVar, stIter, stList) <- get
+      let newLoc = getNewLocForList stList
+      list <- listOfExprs pos_decl [] exprs type_
+      put (stVar, stIter, M.insert newLoc (type_, list) stList)
+      let envList' = M.insert ident newLoc envList
+      let newEnv = ((envVar, envIter, envList'), envProc, envGen)
+      local (const newEnv) (evalStmts ret_type pos stmts)
     _notDecl -> do
       ret <- evalStmt ret_type stmt
       case ret of
