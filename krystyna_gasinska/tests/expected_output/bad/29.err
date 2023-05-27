@@ -1,1 +1,1 @@
-interpreter: line 5, column 9 Return statement outside procedure
+interpreter: [type checker] line 5, column 9 Return in generator

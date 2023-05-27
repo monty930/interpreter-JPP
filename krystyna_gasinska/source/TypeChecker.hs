@@ -294,8 +294,17 @@ checkStmt ret_type (While_T pos expr block) = do
             pos
 
 checkStmt ret_type (ForGen_T pos ident1 ident2 funargs block) = do
-    liftIO $ putStrLn "STMT FOR UNDEFINED"
-    return ()
+    ((envVar, envIter), envProc, envGen) <- ask
+    (storeVar, storeIter) <- get
+    -- check if generator exists
+    case M.lookup ident2 envGen of
+        Nothing -> makeTypeError ("Generator " ++ getIdentString ident2 ++ " not found") pos
+        Just (type_, argTypes) -> do
+            checkArgs pos funargs argTypes
+            let loc = getNewLocT storeVar
+            let envVar' = M.insert ident1 loc envVar
+            put (M.insert loc type_ storeVar, storeIter)
+            local (const ((envVar', envIter), envProc, envGen)) (checkBlock ret_type block)
 
 checkStmt retType (Incr_T pos ident) = 
     checkIncrDecr pos ident
@@ -340,12 +349,12 @@ checkStmt retType (DeclGen_T pos type_ ident expr) =
 blockRetToTypeReturn :: BNFC'Position -> BlockRetType -> RSET TypeT
 blockRetToTypeReturn pos (RetType type_) = return (toTypeT type_)
 blockRetToTypeReturn pos NoRetType = return VoidT 
-blockRetToTypeReturn pos _ = makeTypeError "Yield outside generator" pos
+blockRetToTypeReturn pos _ = makeTypeError "Return in generator" pos
 
 blockRetToTypeYield :: BNFC'Position -> BlockRetType -> RSET TypeT
 blockRetToTypeYield pos (YieldType type_) = return (toTypeT type_)
 blockRetToTypeYield pos NoRetType = return VoidT
-blockRetToTypeYield pos _ = makeTypeError "Return in generator" pos
+blockRetToTypeYield pos _ = makeTypeError "Yield outside generator" pos
 
 checkIncrDecr :: BNFC'Position -> Ident -> RSET ()
 checkIncrDecr pos ident = do
@@ -537,10 +546,10 @@ checkExpr (EGenNext_T pos ident) = do
     ((envVar, envIter), envProc, envGen) <- ask
     (stVar, stIter) <- get
     case M.lookup ident envIter of
-        Nothing -> makeTypeError ("Generator " ++ getIdentString ident ++ " not declared") pos
+        Nothing -> makeTypeError ("Iterator " ++ getIdentString ident ++ " not declared") pos
         Just loc -> do 
             case M.lookup loc stIter of
-                Nothing -> makeTypeError ("Generator " ++ getIdentString ident ++ " not defined") pos
+                Nothing -> makeTypeError ("Iterator " ++ getIdentString ident ++ " not defined") pos
                 Just type_ -> return type_
 
 checkExpr (App_T pos ident funargs) = do 

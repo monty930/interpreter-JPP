@@ -1,1 +1,1 @@
-interpreter: line 12, column 5 Variable i not in scope
+interpreter: [type checker] line 12, column 5 Variable i undefined
