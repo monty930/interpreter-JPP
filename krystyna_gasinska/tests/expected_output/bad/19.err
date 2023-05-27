@@ -1,1 +1,1 @@
-interpreter: [type checker] line 2, column 5 Condition has type bool but should have type Bool
+interpreter: [type checker] line 5, column 5 Condition has type int but should have type bool

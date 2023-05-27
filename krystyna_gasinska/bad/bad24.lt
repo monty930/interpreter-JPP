@@ -1,5 +1,6 @@
 int p() {
     return ('c');
+    int a = 'b';
 }
 
 Proc main() {
