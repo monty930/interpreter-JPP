@@ -4,7 +4,7 @@ The interpreter of the C-like imperative language (similar to Latte). The langua
 
 The examples of usage are presented in 'bad' and 'good' directories.
 
-To compile run: '''make'''
+To compile run: ```make```
 
 To run the interpreter:
-'''./interpreter source_file.lt'''
+```./interpreter source_file.lt```.
