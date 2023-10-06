@@ -9,5 +9,3 @@ Proc main() {
 Proc p1() {
 
 }
-
-// Procedure 'p1' already exists

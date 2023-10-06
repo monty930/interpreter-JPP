@@ -1,0 +1,14 @@
+Gen int g1() {
+    yield(1);
+    yield(2);
+    while (true) {
+        
+    }
+    yield(3);
+}
+
+Proc main () {
+    gen xm = g1();
+    int x = 0;
+    char c = next(x);
+}

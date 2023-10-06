@@ -1,0 +1,34 @@
+Glob char a = 'A';
+
+list char l = [a, 'b', (char) 68];
+
+Proc main() {
+    l.push('E');
+    int count = 0;
+    while (count < l.len) {
+        print_line((string) l[count]);
+        count++;
+    }
+
+    int i = 0;
+    list int l = [i, i + 1, 2 + 2];
+    print_line((string) l[0] + " " + (string) l[1] + " " + (string) l[2]);
+
+    list char l = ['c'];
+    l.push('d');
+    print_line((string) l[1]);
+
+    list string l = ["1abc", "2sss", "3abcd", "4xyz1"];
+    l.pop;
+    l.add(0).("5nowy");
+    print_line((string) l[0]);
+    print_line((string) l[1]);
+    print_line((string) l[2]);
+    print_line((string) l[3]);
+
+    print_line("");
+    l.remove(2);
+    print_line((string) l[0]);
+    print_line((string) l[1]);
+    print_line((string) l[2]);
+}

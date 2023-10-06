@@ -1,0 +1,19 @@
+Glob int x = 10;
+
+Glob int x = 2 + 2;
+
+Glob int y = x;
+
+Glob bool z = x == y;
+
+Glob int x = (int) true;
+
+Glob int x = 3 - 2;
+
+Glob int x = - 3;
+
+Glob int x = (bool) '0';
+
+Proc main() {
+    
+}

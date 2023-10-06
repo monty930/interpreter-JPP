@@ -1,0 +1,36 @@
+Gen char g1() {
+    int i = 70;
+    while (i > 65) {
+        i--;
+        yield ((char) i);
+    }
+}
+
+Gen bool g2() {
+    int i = 70;
+    while (i > 65) {
+        i--;
+        yield ((bool) (i % 2));
+    }
+}
+
+Gen string g3() {
+    yield ("HELLO");
+    yield (" ");
+    yield ("WORLD!");
+}
+
+Proc main() {
+    for (i in g1()) {
+        print_line((string) i);
+    }
+
+    for (i in g2()) {
+        print_line((string) i);
+    }
+
+    for (j in g3()) {
+        print(j);
+    }
+    print_line("");
+}

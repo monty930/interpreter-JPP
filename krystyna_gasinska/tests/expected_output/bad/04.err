@@ -1,1 +1,1 @@
-interpreter: line 9, column 1 Procedure p1 already defined
+interpreter: [type checker] line 9, column 1 Procedure p1 is already defined.

@@ -1,1 +1,1 @@
-interpreter: line 2, column 5 Unexpected return
+interpreter: [type checker] line 2, column 5 Return in void function

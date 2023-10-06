@@ -6,5 +6,3 @@ Proc main() {
     int arg = 42;
     P(arg, 'c', "wrong type");
 }
-
-// Expected: Wrong argument type

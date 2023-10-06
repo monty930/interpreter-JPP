@@ -1,0 +1,13 @@
+Gen int g1() {
+    yield(1);
+    yield(2);
+    yield(3);
+}
+
+Proc main () {
+    for (i in g1()) {
+        print_line("in main g3: " + (string) i);
+    }
+
+    i++; // error
+}

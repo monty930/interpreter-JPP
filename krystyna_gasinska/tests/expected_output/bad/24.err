@@ -1,1 +1,1 @@
-interpreter: line 6, column 5 Wrong return type
+interpreter: [type checker] line 2, column 5 Return has type char but should have type int

@@ -24,12 +24,15 @@ data Program' a = Program_T a [TopDef' a]
 
 type TopDef = TopDef' BNFC'Position
 data TopDef' a
-    = ProcDef_T a (RetVal' a) Ident [Arg' a] (Block' a)
+    = ProcDecl_T a (RetVal' a) Ident [Arg' a]
+    | ListGlobDecl_T a (Type' a) Ident [Expr' a]
+    | ProcDef_T a (RetVal' a) Ident [Arg' a] (Block' a)
     | GlobVar_T a (Type' a) Ident (Expr' a)
+    | Gener_T a (Type' a) Ident [Arg' a] (Block' a)
   deriving (C.Eq, C.Ord, C.Show, C.Read, C.Functor, C.Foldable, C.Traversable)
 
 type Arg = Arg' BNFC'Position
-data Arg' a = Arg_T a (Type' a) Ident
+data Arg' a = Arg_T a (Type' a) Ident | ArgList_T a Ident
   deriving (C.Eq, C.Ord, C.Show, C.Read, C.Functor, C.Foldable, C.Traversable)
 
 type Block = Block' BNFC'Position
@@ -44,11 +47,20 @@ data Stmt' a
     | Ass_T a Ident (Expr' a)
     | Incr_T a Ident
     | Decr_T a Ident
+    | Break_T a
+    | Continue_T a
     | Cond_T a (Expr' a) (Block' a)
     | CondElse_T a (Expr' a) (Block' a) (Block' a)
     | While_T a (Expr' a) (Block' a)
-    | App_T a Ident [FunArg' a]
     | Return_T a (Expr' a)
+    | Yield_T a (Expr' a)
+    | DeclGen_T a Ident Ident [FunArg' a]
+    | ForGen_T a Ident Ident [FunArg' a] (Block' a)
+    | DeclList_T a (Type' a) Ident [Expr' a]
+    | PushToList_T a Ident (Expr' a)
+    | PopFromList_T a Ident
+    | AddToList_T a Ident (Expr' a) (Expr' a)
+    | RemoveFromList_T a Ident (Expr' a)
     | SExp_T a (Expr' a)
   deriving (C.Eq, C.Ord, C.Show, C.Read, C.Functor, C.Foldable, C.Traversable)
 
@@ -66,8 +78,11 @@ data Var' a = Var_T a Ident
 
 type Expr = Expr' BNFC'Position
 data Expr' a
-    = EVar_T a (Var' a)
+    = EListElem_T a Ident (Expr' a)
+    | EVar_T a (Var' a)
     | ELit_T a (ELit' a)
+    | EListLen_T a Ident
+    | App_T a Ident [FunArg' a]
     | Neg_T a (Expr' a)
     | Not_T a (Expr' a)
     | EMul_T a (Expr' a) (MulOp' a) (Expr' a)
@@ -76,6 +91,7 @@ data Expr' a
     | EAnd_T a (Expr' a) (Expr' a)
     | EOr_T a (Expr' a) (Expr' a)
     | ECast_T a (Type' a) (Expr' a)
+    | EGenNext_T a Ident
   deriving (C.Eq, C.Ord, C.Show, C.Read, C.Functor, C.Foldable, C.Traversable)
 
 type ELit = ELit' BNFC'Position
@@ -131,12 +147,16 @@ instance HasPosition Program where
 
 instance HasPosition TopDef where
   hasPosition = \case
+    ProcDecl_T p _ _ _ -> p
+    ListGlobDecl_T p _ _ _ -> p
     ProcDef_T p _ _ _ _ -> p
     GlobVar_T p _ _ _ -> p
+    Gener_T p _ _ _ _ -> p
 
 instance HasPosition Arg where
   hasPosition = \case
     Arg_T p _ _ -> p
+    ArgList_T p _ -> p
 
 instance HasPosition Block where
   hasPosition = \case
@@ -150,11 +170,20 @@ instance HasPosition Stmt where
     Ass_T p _ _ -> p
     Incr_T p _ -> p
     Decr_T p _ -> p
+    Break_T p -> p
+    Continue_T p -> p
     Cond_T p _ _ -> p
     CondElse_T p _ _ _ -> p
     While_T p _ _ -> p
-    App_T p _ _ -> p
     Return_T p _ -> p
+    Yield_T p _ -> p
+    DeclGen_T p _ _ _ -> p
+    ForGen_T p _ _ _ _ -> p
+    DeclList_T p _ _ _ -> p
+    PushToList_T p _ _ -> p
+    PopFromList_T p _ -> p
+    AddToList_T p _ _ _ -> p
+    RemoveFromList_T p _ _ -> p
     SExp_T p _ -> p
 
 instance HasPosition Type where
@@ -175,8 +204,11 @@ instance HasPosition Var where
 
 instance HasPosition Expr where
   hasPosition = \case
+    EListElem_T p _ _ -> p
     EVar_T p _ -> p
     ELit_T p _ -> p
+    EListLen_T p _ -> p
+    App_T p _ _ -> p
     Neg_T p _ -> p
     Not_T p _ -> p
     EMul_T p _ _ _ -> p
@@ -185,6 +217,7 @@ instance HasPosition Expr where
     EAnd_T p _ _ -> p
     EOr_T p _ _ -> p
     ECast_T p _ _ -> p
+    EGenNext_T p _ -> p
 
 instance HasPosition ELit where
   hasPosition = \case

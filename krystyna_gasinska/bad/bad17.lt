@@ -7,6 +7,3 @@ Proc main() {
     int z = 0;
     f(&x);
 }
-
-// expected: 
-// Type mismatch

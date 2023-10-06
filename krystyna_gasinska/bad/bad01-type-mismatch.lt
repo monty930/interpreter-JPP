@@ -2,7 +2,3 @@ Proc main() {
     bool x = 10;
     print_line((string) x);
 }
-
-/* expected: 
-    Type mismatch
-*/

@@ -7,7 +7,3 @@ Proc main() {
     char d = 'd';
     d = 'c' + 'd';
 }
-
-// Expected:
-// Hello World
-// Wrong operation argument

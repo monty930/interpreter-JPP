@@ -6,7 +6,3 @@ Proc main () {
         print_line("in second if");
     }
 }
-
-// Expected:
-// in if
-// Wrong condition type

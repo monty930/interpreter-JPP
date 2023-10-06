@@ -146,8 +146,11 @@ instance Print (AbsGrammar.Program' a) where
 
 instance Print (AbsGrammar.TopDef' a) where
   prt i = \case
+    AbsGrammar.ProcDecl_T _ retval id_ args -> prPrec i 0 (concatD [prt 0 retval, prt 0 id_, doc (showString "("), prt 0 args, doc (showString ")"), doc (showString ";")])
+    AbsGrammar.ListGlobDecl_T _ type_ id_ exprs -> prPrec i 0 (concatD [doc (showString "list"), prt 0 type_, prt 0 id_, doc (showString "="), doc (showString "["), prt 0 exprs, doc (showString "]"), doc (showString ";")])
     AbsGrammar.ProcDef_T _ retval id_ args block -> prPrec i 0 (concatD [prt 0 retval, prt 0 id_, doc (showString "("), prt 0 args, doc (showString ")"), prt 0 block])
     AbsGrammar.GlobVar_T _ type_ id_ expr -> prPrec i 0 (concatD [doc (showString "Glob"), prt 0 type_, prt 0 id_, doc (showString "="), prt 0 expr, doc (showString ";")])
+    AbsGrammar.Gener_T _ type_ id_ args block -> prPrec i 0 (concatD [doc (showString "Gen"), prt 0 type_, prt 0 id_, doc (showString "("), prt 0 args, doc (showString ")"), prt 0 block])
 
 instance Print [AbsGrammar.TopDef' a] where
   prt _ [] = concatD []
@@ -156,6 +159,7 @@ instance Print [AbsGrammar.TopDef' a] where
 instance Print (AbsGrammar.Arg' a) where
   prt i = \case
     AbsGrammar.Arg_T _ type_ id_ -> prPrec i 0 (concatD [prt 0 type_, prt 0 id_])
+    AbsGrammar.ArgList_T _ id_ -> prPrec i 0 (concatD [doc (showString "list"), prt 0 id_])
 
 instance Print [AbsGrammar.Arg' a] where
   prt _ [] = concatD []
@@ -178,11 +182,20 @@ instance Print (AbsGrammar.Stmt' a) where
     AbsGrammar.Ass_T _ id_ expr -> prPrec i 0 (concatD [prt 0 id_, doc (showString "="), prt 0 expr, doc (showString ";")])
     AbsGrammar.Incr_T _ id_ -> prPrec i 0 (concatD [prt 0 id_, doc (showString "++"), doc (showString ";")])
     AbsGrammar.Decr_T _ id_ -> prPrec i 0 (concatD [prt 0 id_, doc (showString "--"), doc (showString ";")])
+    AbsGrammar.Break_T _ -> prPrec i 0 (concatD [doc (showString "break"), doc (showString ";")])
+    AbsGrammar.Continue_T _ -> prPrec i 0 (concatD [doc (showString "continue"), doc (showString ";")])
     AbsGrammar.Cond_T _ expr block -> prPrec i 0 (concatD [doc (showString "if"), doc (showString "("), prt 0 expr, doc (showString ")"), prt 0 block])
     AbsGrammar.CondElse_T _ expr block1 block2 -> prPrec i 0 (concatD [doc (showString "if"), doc (showString "("), prt 0 expr, doc (showString ")"), prt 0 block1, doc (showString "else"), prt 0 block2])
     AbsGrammar.While_T _ expr block -> prPrec i 0 (concatD [doc (showString "while"), doc (showString "("), prt 0 expr, doc (showString ")"), prt 0 block])
-    AbsGrammar.App_T _ id_ funargs -> prPrec i 0 (concatD [prt 0 id_, doc (showString "("), prt 0 funargs, doc (showString ")")])
     AbsGrammar.Return_T _ expr -> prPrec i 0 (concatD [doc (showString "return"), doc (showString "("), prt 0 expr, doc (showString ")")])
+    AbsGrammar.Yield_T _ expr -> prPrec i 0 (concatD [doc (showString "yield"), doc (showString "("), prt 0 expr, doc (showString ")")])
+    AbsGrammar.DeclGen_T _ id_1 id_2 funargs -> prPrec i 0 (concatD [doc (showString "gen"), prt 0 id_1, doc (showString "="), prt 0 id_2, doc (showString "("), prt 0 funargs, doc (showString ")"), doc (showString ";")])
+    AbsGrammar.ForGen_T _ id_1 id_2 funargs block -> prPrec i 0 (concatD [doc (showString "for"), doc (showString "("), prt 0 id_1, doc (showString "in"), prt 0 id_2, doc (showString "("), prt 0 funargs, doc (showString ")"), doc (showString ")"), prt 0 block])
+    AbsGrammar.DeclList_T _ type_ id_ exprs -> prPrec i 0 (concatD [doc (showString "list"), prt 0 type_, prt 0 id_, doc (showString "="), doc (showString "["), prt 0 exprs, doc (showString "]"), doc (showString ";")])
+    AbsGrammar.PushToList_T _ id_ expr -> prPrec i 0 (concatD [prt 0 id_, doc (showString ".push"), doc (showString "("), prt 0 expr, doc (showString ")"), doc (showString ";")])
+    AbsGrammar.PopFromList_T _ id_ -> prPrec i 0 (concatD [prt 0 id_, doc (showString ".pop"), doc (showString ";")])
+    AbsGrammar.AddToList_T _ id_ expr1 expr2 -> prPrec i 0 (concatD [prt 0 id_, doc (showString ".add"), doc (showString "("), prt 0 expr1, doc (showString ").("), prt 0 expr2, doc (showString ")"), doc (showString ";")])
+    AbsGrammar.RemoveFromList_T _ id_ expr -> prPrec i 0 (concatD [prt 0 id_, doc (showString ".remove"), doc (showString "("), prt 0 expr, doc (showString ")"), doc (showString ";")])
     AbsGrammar.SExp_T _ expr -> prPrec i 0 (concatD [prt 0 expr, doc (showString ";")])
 
 instance Print (AbsGrammar.Type' a) where
@@ -203,8 +216,11 @@ instance Print (AbsGrammar.Var' a) where
 
 instance Print (AbsGrammar.Expr' a) where
   prt i = \case
+    AbsGrammar.EListElem_T _ id_ expr -> prPrec i 7 (concatD [prt 0 id_, doc (showString "["), prt 0 expr, doc (showString "]")])
     AbsGrammar.EVar_T _ var -> prPrec i 7 (concatD [prt 0 var])
     AbsGrammar.ELit_T _ elit -> prPrec i 7 (concatD [prt 0 elit])
+    AbsGrammar.EListLen_T _ id_ -> prPrec i 7 (concatD [prt 0 id_, doc (showString ".len")])
+    AbsGrammar.App_T _ id_ funargs -> prPrec i 7 (concatD [prt 0 id_, doc (showString "("), prt 0 funargs, doc (showString ")")])
     AbsGrammar.Neg_T _ expr -> prPrec i 6 (concatD [doc (showString "-"), prt 7 expr])
     AbsGrammar.Not_T _ expr -> prPrec i 6 (concatD [doc (showString "!"), prt 7 expr])
     AbsGrammar.EMul_T _ expr1 mulop expr2 -> prPrec i 5 (concatD [prt 5 expr1, prt 0 mulop, prt 6 expr2])
@@ -213,6 +229,7 @@ instance Print (AbsGrammar.Expr' a) where
     AbsGrammar.EAnd_T _ expr1 expr2 -> prPrec i 2 (concatD [prt 3 expr1, doc (showString "&&"), prt 2 expr2])
     AbsGrammar.EOr_T _ expr1 expr2 -> prPrec i 1 (concatD [prt 2 expr1, doc (showString "||"), prt 1 expr2])
     AbsGrammar.ECast_T _ type_ expr -> prPrec i 6 (concatD [doc (showString "("), prt 0 type_, doc (showString ")"), prt 6 expr])
+    AbsGrammar.EGenNext_T _ id_ -> prPrec i 6 (concatD [doc (showString "next"), doc (showString "("), prt 0 id_, doc (showString ")")])
 
 instance Print (AbsGrammar.ELit' a) where
   prt i = \case

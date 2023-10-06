@@ -34,14 +34,19 @@ except ``"`` unless preceded by ``\``.
 The set of reserved words is the set of terminals appearing in the grammar. Those reserved words that consist of non-letter characters are called symbols, and they are treated in a different way from those that are similar to identifiers. The lexer follows rules familiar from languages like Haskell, C, and Java, including longest match and spacing conventions.
 
 The reserved words used in grammar are the following:
-  | ``Glob`` | ``Proc`` | ``bool`` | ``char``
-  | ``else`` | ``false`` | ``if`` | ``int``
+  | ``Gen`` | ``Glob`` | ``Proc`` | ``bool``
+  | ``break`` | ``char`` | ``continue`` | ``else``
+  | ``false`` | ``for`` | ``gen`` | ``if``
+  | ``in`` | ``int`` | ``list`` | ``next``
   | ``return`` | ``string`` | ``true`` | ``while``
+  | ``yield`` |  |  |
 
 The symbols used in grammar are the following:
-  | ( | ) | = | ;
-  | , | { | } | ++
-  | -- | & | - | !
+  | ( | ) | ; | =
+  | [ | ] | , | {
+  | } | ++ | -- | .push
+  | .pop | .add | ).( | .remove
+  | .len | & | - | !
   | && | || | + | *
   | / | % | < | <=
   | > | >= | == | !=
@@ -56,11 +61,15 @@ and **eps** (empty rule) belong to the BNF notation.
 All other symbols are terminals.
 
   | //Program// | -> | //[TopDef]//
-  | //TopDef// | -> | //RetVal// //Ident// ``(`` //[Arg]// ``)`` //Block//
+  | //TopDef// | -> | //RetVal// //Ident// ``(`` //[Arg]// ``)`` ``;``
+  |  |  **|**  | ``list`` //Type// //Ident// ``=`` ``[`` //[Expr]// ``]`` ``;``
+  |  |  **|**  | //RetVal// //Ident// ``(`` //[Arg]// ``)`` //Block//
   |  |  **|**  | ``Glob`` //Type// //Ident// ``=`` //Expr// ``;``
+  |  |  **|**  | ``Gen`` //Type// //Ident// ``(`` //[Arg]// ``)`` //Block//
   | //[TopDef]// | -> | **eps**
   |  |  **|**  | //TopDef// //[TopDef]//
   | //Arg// | -> | //Type// //Ident//
+  |  |  **|**  | ``list`` //Ident//
   | //[Arg]// | -> | **eps**
   |  |  **|**  | //Arg//
   |  |  **|**  | //Arg// ``,`` //[Arg]//
@@ -73,11 +82,20 @@ All other symbols are terminals.
   |  |  **|**  | //Ident// ``=`` //Expr// ``;``
   |  |  **|**  | //Ident// ``++`` ``;``
   |  |  **|**  | //Ident// ``--`` ``;``
+  |  |  **|**  | ``break`` ``;``
+  |  |  **|**  | ``continue`` ``;``
   |  |  **|**  | ``if`` ``(`` //Expr// ``)`` //Block//
   |  |  **|**  | ``if`` ``(`` //Expr// ``)`` //Block// ``else`` //Block//
   |  |  **|**  | ``while`` ``(`` //Expr// ``)`` //Block//
-  |  |  **|**  | //Ident// ``(`` //[FunArg]// ``)``
   |  |  **|**  | ``return`` ``(`` //Expr// ``)``
+  |  |  **|**  | ``yield`` ``(`` //Expr// ``)``
+  |  |  **|**  | ``gen`` //Ident// ``=`` //Ident// ``(`` //[FunArg]// ``)`` ``;``
+  |  |  **|**  | ``for`` ``(`` //Ident// ``in`` //Ident// ``(`` //[FunArg]// ``)`` ``)`` //Block//
+  |  |  **|**  | ``list`` //Type// //Ident// ``=`` ``[`` //[Expr]// ``]`` ``;``
+  |  |  **|**  | //Ident// ``.push`` ``(`` //Expr// ``)`` ``;``
+  |  |  **|**  | //Ident// ``.pop`` ``;``
+  |  |  **|**  | //Ident// ``.add`` ``(`` //Expr// ``).(`` //Expr// ``)`` ``;``
+  |  |  **|**  | //Ident// ``.remove`` ``(`` //Expr// ``)`` ``;``
   |  |  **|**  | //Expr// ``;``
   | //Type// | -> | ``int``
   |  |  **|**  | ``char``
@@ -86,8 +104,11 @@ All other symbols are terminals.
   | //RetVal// | -> | //Type//
   |  |  **|**  | ``Proc``
   | //Var// | -> | //Ident//
-  | //Expr7// | -> | //Var//
+  | //Expr7// | -> | //Ident// ``[`` //Expr// ``]``
+  |  |  **|**  | //Var//
   |  |  **|**  | //ELit//
+  |  |  **|**  | //Ident// ``.len``
+  |  |  **|**  | //Ident// ``(`` //[FunArg]// ``)``
   |  |  **|**  | ``(`` //Expr// ``)``
   | //ELit// | -> | //Integer//
   |  |  **|**  | //EBool//
@@ -103,6 +124,7 @@ All other symbols are terminals.
   | //Expr6// | -> | ``-`` //Expr7//
   |  |  **|**  | ``!`` //Expr7//
   |  |  **|**  | ``(`` //Type// ``)`` //Expr6//
+  |  |  **|**  | ``next`` ``(`` //Ident// ``)``
   |  |  **|**  | //Expr7//
   | //Expr5// | -> | //Expr5// //MulOp// //Expr6//
   |  |  **|**  | //Expr6//

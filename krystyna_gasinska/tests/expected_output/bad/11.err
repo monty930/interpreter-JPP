@@ -1,1 +1,1 @@
-interpreter: line 8, column 9 Wrong operation argument
+interpreter: [type checker] line 8, column 9 Add expression should be of type int or string

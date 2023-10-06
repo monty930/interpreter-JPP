@@ -3,5 +3,3 @@ Proc main() {
     x = 13;
     print_line((string) x);
 }
-
-// Expected: Type mismatch (in 2nd line)

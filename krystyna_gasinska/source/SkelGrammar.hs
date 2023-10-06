@@ -25,12 +25,16 @@ transProgram x = case x of
 
 transTopDef :: Show a => AbsGrammar.TopDef' a -> Result
 transTopDef x = case x of
+  AbsGrammar.ProcDecl_T _ retval ident args -> failure x
+  AbsGrammar.ListGlobDecl_T _ type_ ident exprs -> failure x
   AbsGrammar.ProcDef_T _ retval ident args block -> failure x
   AbsGrammar.GlobVar_T _ type_ ident expr -> failure x
+  AbsGrammar.Gener_T _ type_ ident args block -> failure x
 
 transArg :: Show a => AbsGrammar.Arg' a -> Result
 transArg x = case x of
   AbsGrammar.Arg_T _ type_ ident -> failure x
+  AbsGrammar.ArgList_T _ type_ ident -> failure x
 
 transBlock :: Show a => AbsGrammar.Block' a -> Result
 transBlock x = case x of
@@ -44,10 +48,20 @@ transStmt x = case x of
   AbsGrammar.Ass_T _ ident expr -> failure x
   AbsGrammar.Incr_T _ ident -> failure x
   AbsGrammar.Decr_T _ ident -> failure x
+  AbsGrammar.Break_T _ -> failure x
+  AbsGrammar.Continue_T _ -> failure x
   AbsGrammar.Cond_T _ expr block -> failure x
   AbsGrammar.CondElse_T _ expr block1 block2 -> failure x
   AbsGrammar.While_T _ expr block -> failure x
   AbsGrammar.Return_T _ expr -> failure x
+  AbsGrammar.Yield_T _ expr -> failure x
+  AbsGrammar.DeclGen_T _ ident1 ident2 funargs -> failure x
+  AbsGrammar.ForGen_T _ ident1 ident2 funargs block -> failure x
+  AbsGrammar.DeclList_T _ type_ ident exprs -> failure x
+  AbsGrammar.PushToList_T _ ident expr -> failure x
+  AbsGrammar.PopFromList_T _ ident -> failure x
+  AbsGrammar.AddToList_T _ ident expr1 expr2 -> failure x
+  AbsGrammar.RemoveFromList_T _ ident expr -> failure x
   AbsGrammar.SExp_T _ expr -> failure x
 
 transType :: Show a => AbsGrammar.Type' a -> Result
@@ -68,8 +82,10 @@ transVar x = case x of
 
 transExpr :: Show a => AbsGrammar.Expr' a -> Result
 transExpr x = case x of
+  AbsGrammar.EListElem_T _ ident expr -> failure x
   AbsGrammar.EVar_T _ var -> failure x
   AbsGrammar.ELit_T _ elit -> failure x
+  AbsGrammar.EListLen_T _ ident -> failure x
   AbsGrammar.App_T _ ident funargs -> failure x
   AbsGrammar.Neg_T _ expr -> failure x
   AbsGrammar.Not_T _ expr -> failure x
@@ -79,6 +95,7 @@ transExpr x = case x of
   AbsGrammar.EAnd_T _ expr1 expr2 -> failure x
   AbsGrammar.EOr_T _ expr1 expr2 -> failure x
   AbsGrammar.ECast_T _ type_ expr -> failure x
+  AbsGrammar.EGenNext_T _ ident -> failure x
 
 transELit :: Show a => AbsGrammar.ELit' a -> Result
 transELit x = case x of

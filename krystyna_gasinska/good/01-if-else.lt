@@ -13,7 +13,3 @@ Proc main() {
     else { f(x); }
     print_line((string) x);
 }
-
-// expected: 
-// 1
-// 3

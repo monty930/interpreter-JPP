@@ -5,6 +5,3 @@ Proc main() {
     
     print_line((string) y);
 }
-
-// expected: 
-// 120

@@ -14,7 +14,3 @@ Proc main() {
     print_line((string) x);
     string s = "aaa";
 }
-
-// expected: 
-// 2
-// Variable not in scope

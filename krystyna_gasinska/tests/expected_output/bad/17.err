@@ -1,1 +1,1 @@
-interpreter: line 2, column 5 Type mismatch
+interpreter: [type checker] line 2, column 5 Variable y has type char but should have type int
